@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    font-family: sans-serif;
+}
+
+/* Prevent iOS Safari from auto-zooming when tapping input fields.
+   Safari zooms in whenever an input's font-size is below 16px.
+   Setting font-size: 16px here overrides that without affecting visual
+   size — Tailwind utility classes on each input still control appearance. */
+input,
+textarea,
+select {
+    font-size: 16px !important;
+}
+
+
+/* @keyframes scrollLeft {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+} */
+
+/* .animate-scroll {
+    animation: scrollLeft 35s linear infinite;
+}
+
+.animate-scroll:hover {
+    animation-play-state: paused;
+} */
+
+/* .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+} */
+
+@keyframes tilePop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
