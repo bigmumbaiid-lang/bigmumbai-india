@@ -172,7 +172,6 @@ function GiftClaim() {
     const getCash = async () => {
         if (loading) return;
 
-        // gate the claim on auth instead of letting the server bounce it
         if (!isLoggedIn) {
             setModal({
                 open: true,
@@ -180,7 +179,7 @@ function GiftClaim() {
                 title: 'Log in to continue',
                 message: 'Sign in to your account to claim this reward.',
                 actionLabel: 'Log in',
-                onAction: () => navigate('/login'), // adjust to your auth route
+                onAction: () => navigate('/login'),
             });
             return;
         }
@@ -200,7 +199,7 @@ function GiftClaim() {
             setModal({
                 open: true,
                 variant: 'error',
-                title: 'Couldn’t claim this gift',
+                title: 'Couldn\'t claim this gift',
                 message:
                     error.response?.data?.message ||
                     'Something went wrong. Please try again in a moment.',
@@ -250,10 +249,8 @@ function GiftClaim() {
                     <span className="ml-3 text-base font-medium">Financial assistance</span>
                 </div>
 
-                {/* Treasure — bg scene comes from the container; this just holds the chest */}
+                {/* Treasure */}
                 <div className="relative h-[260px] flex items-center justify-center overflow-hidden">
-                    {/* The wrapper owns the centering transform; the motion.div only
-                        animates y, so framer-motion can't clobber the -translate-x-1/2. */}
                     <div className="absolute left-1/2 top-[34%] -translate-x-1/2 w-[34%] max-w-[180px] z-10">
                         <motion.div
                             animate={isAlreadyClaimed ? {} : { y: [0, -8, 0] }}
@@ -283,7 +280,7 @@ function GiftClaim() {
                     {!isInvalid && isAlreadyClaimed && (
                         <div className="bg-white rounded-2xl px-6 py-5 text-center shadow-xl mx-auto max-w-[340px]">
                             <p className="text-gray-800 font-semibold text-[17px] leading-tight">
-                                You’ve already claimed{' '}
+                                You've already claimed{' '}
                                 <span className="text-[#e31e2c]">₹{giftAmount}</span>
                             </p>
                         </div>

@@ -238,7 +238,7 @@ function Transaction() {
                                                 {display.title}
                                             </span>
                                             <p className="text-sm text-[#aaa]">
-                                                {new Date(item.date)
+                                                {new Date(item.type === 'payment' && item.successAt ? item.successAt : item.date)
                                                     .toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" })
                                                     .replace(",", "")}
                                             </p>

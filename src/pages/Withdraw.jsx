@@ -315,11 +315,6 @@ function Withdraw() {
                         )}
                     </button>
 
-                    {!pageLoading && !allowWithdrawal && (
-                        <p className="text-center text-red-500 text-xs">
-                            Withdrawal feature is currently disabled by admin
-                        </p>
-                    )}
                 </div>
             </div>
 

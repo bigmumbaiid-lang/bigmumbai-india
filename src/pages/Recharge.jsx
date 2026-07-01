@@ -173,12 +173,8 @@ export default function Recharge() {
                 <div className="flex-shrink-0">
                     <BackButton
                         label="Recharge"
-                        background="white"
-                        textColor="#1e2637"
-                        iconColor="#1e2637"
                         rightLabel="Records"
                         rightTo="/recharge-records"
-                        rightColor={BRAND_C}
                     />
                 </div>
 

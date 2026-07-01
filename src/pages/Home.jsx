@@ -6,7 +6,7 @@ import WinningCarousel from '../components/WinningCarousel'
 import bigMumbaiLogo from '../assets/bigMumbaiLogo.png'
 import minesIcon from '../assets/minesIcon.jpg'
 import blackJackIcon from '../assets/blackJackIcon.jpg'
-import { Lock, Play, X, Mail } from 'lucide-react'
+import { Lock, Play, X, BellRing, Mail } from 'lucide-react'
 import axiosInstance from '../utils/axios'
 import LotteryIcon from '../assets/lotteryIcons/Lottery.0a2eff85.png'
 import WinGoIcon from '../assets/lotteryIcons/5D-WinGO.c1620dae.png'
@@ -35,52 +35,61 @@ function renderContent(text) {
 
 function PersonalMessageModal({ message, onMarkRead, onLater }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-5"
-            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)' }}>
-            <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-                style={{ background: '#fff' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-8"
+            style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="w-full rounded-3xl overflow-hidden"
+                style={{
+                    maxWidth: 355,
+                    background: '#fff',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.16), 0 4px 14px rgba(177,131,90,0.10)',
+                }}>
+
+                {/* Top accent bar */}
+                <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg,#e2b97a,#b1835a)' }} />
+
                 {/* Header */}
-                <div className="relative px-5 pt-5 pb-4"
-                    style={{ background: 'linear-gradient(135deg,#d9ad82,#b1835a)' }}>
-                    <div className="flex items-start gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                            <Mail size={18} className="text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70 mb-0.5">
-                                Personal Message
-                            </p>
-                            <h3 className="text-base font-bold text-white leading-snug">
-                                {message.title}
-                            </h3>
-                        </div>
+                <div className="relative px-4 pt-5 pb-3 flex items-center gap-3">
+                    <div className="shrink-0 h-9 w-9 rounded-xl flex items-center justify-center"
+                        style={{ background: 'linear-gradient(135deg,#fdf0e2,#f7dfc0)' }}>
+                        <BellRing size={16} style={{ color: '#c49055' }} />
                     </div>
+                    <h3 className="flex-1 text-[14px] font-bold text-gray-800 leading-snug pr-5">
+                        {message.title}
+                    </h3>
                     <button onClick={onLater}
-                        className="absolute top-3 right-3 h-7 w-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                        <X size={14} className="text-white" />
+                        className="absolute top-3.5 right-3.5 h-6 w-6 rounded-full flex items-center justify-center"
+                        style={{ background: '#f3f4f6' }}>
+                        <X size={12} className="text-gray-400" />
                     </button>
                 </div>
 
+                {/* Divider */}
+                <div className="mx-4 h-px" style={{ background: '#f3f3f3' }} />
+
                 {/* Body */}
-                <div className="px-5 py-4">
-                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap break-words">
+                <div className="px-4 py-5">
+                    <p className="text-[12.5px] text-gray-500 leading-relaxed whitespace-pre-wrap break-words">
                         {renderContent(message.content)}
                     </p>
                     {message.imageUrl && (
                         <img src={message.imageUrl} alt=""
-                            className="mt-3 rounded-xl w-full object-cover" style={{ maxHeight: 180 }} />
+                            className="mt-3 rounded-xl w-full object-cover" style={{ maxHeight: 160 }} />
                     )}
                 </div>
 
-                {/* Footer buttons */}
-                <div className="px-5 pb-5 flex gap-3">
+                {/* Footer */}
+                <div className="px-4 pb-5 flex gap-2">
                     <button onClick={onLater}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors">
+                        className="flex-1 py-2 rounded-xl text-[12.5px] font-semibold transition-colors"
+                        style={{ background: '#f5f5f5', color: '#aaa' }}>
                         Later
                     </button>
                     <button onClick={onMarkRead}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-                        style={{ background: 'linear-gradient(90deg,#d9ad82,#b1835a)' }}>
+                        className="flex-1 py-2 rounded-xl text-[12.5px] font-semibold text-white transition-all"
+                        style={{
+                            background: 'linear-gradient(135deg,#e2b97a,#b1835a)',
+                            boxShadow: '0 3px 10px rgba(177,131,90,0.30)',
+                        }}>
                         Mark as Read
                     </button>
                 </div>
@@ -210,8 +219,15 @@ function Home() {
             >
 
                 {/* Header — fixed flex row OUTSIDE the scroll area so it stays pinned */}
-                <div className="flex items-center bg-white px-3 py-2 border-b border-gray-100 shrink-0 z-20">
+                <div className="flex items-center justify-between bg-white px-3 py-2 border-b border-gray-100 shrink-0 z-20">
                     <img src={bigMumbaiLogo} className="w-40" alt="Big Mumbai" />
+                    <button
+                        onClick={() => navigate('/announcement')}
+                        className="relative flex items-center justify-center w-9 h-9 rounded-full"
+                        style={{ background: 'linear-gradient(135deg,#fdf0e2,#f7dfc0)', border: '1.5px solid #e8d0a8' }}
+                    >
+                        <Mail size={17} style={{ color: '#b1835a' }} />
+                    </button>
                 </div>
 
                 {/* Scrollable content. min-h-0 is required for flex children to scroll on iOS */}

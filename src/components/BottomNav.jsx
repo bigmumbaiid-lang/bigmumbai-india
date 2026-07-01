@@ -51,7 +51,7 @@ const BottomNavbar = ({ activeTab = '/', onTabChange }) => {
 
     return (
         <div
-            className="relative w-full flex-shrink-0 z-50"
+            className="relative w-full flex-shrink-0 z-40"
             style={{ WebkitTapHighlightColor: 'transparent' }}
         >
             <nav
