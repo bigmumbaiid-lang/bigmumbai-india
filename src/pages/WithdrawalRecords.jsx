@@ -32,9 +32,8 @@ function WithdrawalRecords() {
 
         switch (status) {
             case 'pending':
-                return 'Pending';
             case 'approved':
-                return 'Approved';
+                return 'Pending';
             case 'success':
                 return 'Successful';
             case 'failed':
