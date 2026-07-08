@@ -139,7 +139,7 @@ function Profile() {
                         {/* Balance + actions card */}
                         <div className="bg-white py-4 rounded-xl shadow-md">
                             <div className="flex justify-between px-4 items-center">
-                                <span className="font-bold text-[#1e2637] text-lg">INR {money ?? 0}.00</span>
+                                <span className="font-bold text-[#1e2637] text-lg">INR {Number(money ?? 0).toFixed(2)}</span>
                                 <div
                                     onClick={() => navigate('/transactions')}
                                     className="bg-[#BA8D63] text-white rounded-full px-3 py-1.5 text-sm cursor-pointer"
@@ -234,7 +234,7 @@ function Profile() {
                 {showCopied && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
                         <div className="absolute inset-0 bg-black/20 animate-fadeIn" />
-                        <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl px-8 py-6 flex flex-col items-center animate-popIn">
+                        <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl px-8 py-8 flex flex-col items-center animate-popIn w-72">
                             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#d9ad82] to-[#b1835a] flex items-center justify-center mb-3 shadow-lg">
                                 <svg className="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none">
                                     <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-drawCheck" />

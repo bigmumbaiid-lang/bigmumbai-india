@@ -219,7 +219,7 @@ function Withdraw() {
                                     }`}
                             >
                                 <span className={`w-1.5 h-1.5 rounded-full ${allowWithdrawal ? 'bg-green-500' : 'bg-red-500'}`} />
-                                {allowWithdrawal ? 'Withdrawals open' : 'Withdrawals disabled'}
+                                {allowWithdrawal ? 'Withdrawal : YES' : 'Withdrawal : NO'}
                             </div>
                         )}
                     </div>

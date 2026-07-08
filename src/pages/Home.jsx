@@ -33,7 +33,7 @@ function renderContent(text) {
     )
 }
 
-function PersonalMessageModal({ message, onMarkRead, onLater }) {
+function PersonalMessageModal({ message, onMarkRead, onLater, isGlobal }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-8"
             style={{ background: 'rgba(0,0,0,0.5)' }}>
@@ -90,7 +90,7 @@ function PersonalMessageModal({ message, onMarkRead, onLater }) {
                             background: 'linear-gradient(135deg,#e2b97a,#b1835a)',
                             boxShadow: '0 3px 10px rgba(177,131,90,0.30)',
                         }}>
-                        Mark as Read
+                        {isGlobal ? 'Got it' : 'Mark as Read'}
                     </button>
                 </div>
             </div>
@@ -168,27 +168,60 @@ function MinesCardIcon() {
     )
 }
 
+const DISMISSED_KEY = 'dismissed_global_announcements'
+
+function getDismissed() {
+    try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]') } catch { return [] }
+}
+
+function addDismissed(id) {
+    try {
+        const dismissed = getDismissed()
+        if (!dismissed.includes(id)) {
+            localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed, id]))
+        }
+    } catch {}
+}
+
 function Home() {
     const navigate = useNavigate()
-    const [msgQueue, setMsgQueue] = useState([])   // unread personal messages
-    const [msgIdx, setMsgIdx]     = useState(0)    // which one is showing
+    const [msgQueue, setMsgQueue] = useState([])
+    const [msgIdx, setMsgIdx]     = useState(0)
 
     useEffect(() => {
-        axiosInstance.get('/announcements/unread-personal')
-            .then(res => { if (res.data?.data?.length) setMsgQueue(res.data.data) })
-            .catch(() => {})
+        const fetchAll = async () => {
+            try {
+                const [personalRes, globalRes] = await Promise.all([
+                    axiosInstance.get('/announcements/unread-personal'),
+                    axiosInstance.get('/announcements/user'),
+                ])
+                const personal = personalRes.data?.data || []
+                const all      = globalRes.data?.data || []
+                const dismissed = getDismissed()
+                const unseenGlobal = all
+                    .filter(a => a.type === 'global' && !dismissed.includes(a._id))
+                    .map(a => ({ ...a, _isGlobal: true }))
+                setMsgQueue([...unseenGlobal, ...personal])
+            } catch {}
+        }
+        fetchAll()
     }, [])
 
     const currentMsg = msgQueue[msgIdx] ?? null
 
     const handleMarkRead = async () => {
-        try {
-            await axiosInstance.patch(`/announcements/${currentMsg._id}/read`)
-        } catch {}
+        if (currentMsg._isGlobal) {
+            addDismissed(currentMsg._id)
+        } else {
+            try { await axiosInstance.patch(`/announcements/${currentMsg._id}/read`) } catch {}
+        }
         advance()
     }
 
-    const handleLater = () => advance()
+    const handleLater = () => {
+        if (currentMsg?._isGlobal) addDismissed(currentMsg._id)
+        advance()
+    }
 
     const advance = () => {
         if (msgIdx + 1 < msgQueue.length) {
@@ -205,6 +238,7 @@ function Home() {
                 message={currentMsg}
                 onMarkRead={handleMarkRead}
                 onLater={handleLater}
+                isGlobal={!!currentMsg._isGlobal}
             />
         )}
         <div

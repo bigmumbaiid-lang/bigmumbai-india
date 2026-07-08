@@ -4,11 +4,13 @@ import BottomNav from '../components/BottomNav';
 import BackButton from '../components/BackButton';
 import { useNavigate } from 'react-router-dom';
 
-const AMOUNTS        = [100, 500, 1000, 2000, 5000, 10000, 20000, 50000];
-const MIN_RECHARGE   = 100;
-const MIN_USDT       = 5000;
-const MAX_REGULAR    = 80_000;
-const MAX_CRYPTO     = 1_000_000;
+const DEFAULT_AMOUNTS    = [100, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+const DEFAULT_LIMITS = {
+    watchpays: { min: 100,  max: 80_000   },
+    jazpays:   { min: 100,  max: 80_000   },
+    trx:       { min: 100,  max: 1_000_000 },
+    usdt:      { min: 5000, max: 1_000_000 },
+};
 const HDR_GRAD       = 'linear-gradient(160deg, #d9ad82 0%, #b1835a 100%)';
 const BRAND_C        = '#b1835a';
 const BTN_C          = '#BA8D63';
@@ -64,13 +66,14 @@ const MODAL_CFG = {
 export default function Recharge() {
     const navigate = useNavigate();
 
-    const [money,    setMoney]   = useState(0);
-    const [custom,   setCustom]  = useState('');
-    const [channel,  setChannel] = useState('watchpays');
-    const [loading,  setLoading] = useState(false);
-    const [pageLoad, setPageLoad] = useState(true);
-    const [modal,    setModal]   = useState(null);
-    const [pending,  setPending] = useState(null);
+    const [money,      setMoney]     = useState(0);
+    const [custom,     setCustom]    = useState('');
+    const [channel,    setChannel]   = useState('watchpays');
+    const [loading,    setLoading]   = useState(false);
+    const [pageLoad,   setPageLoad]  = useState(true);
+    const [modal,      setModal]     = useState(null);
+    const [pending,    setPending]   = useState(null);
+    const [depConfig,  setDepConfig] = useState({});
 
     const toast = useCallback((type, msg) => setModal({ type, msg, title: MODAL_CFG[type]?.title }), []);
     const clear  = useCallback(() => setModal(null), []);
@@ -83,17 +86,42 @@ export default function Recharge() {
 
     useEffect(() => {
         (async () => {
-            try   { const r = await axios.post('/user/profile'); setMoney(r.data.user?.money || 0); }
-            catch { toast('error', 'Failed to load balance'); }
+            try {
+                const [profileRes, configRes] = await Promise.all([
+                    axios.post('/user/profile'),
+                    axios.get('/deposit-config').catch(() => ({ data: { data: {} } })),
+                ]);
+                setMoney(profileRes.data.user?.money || 0);
+                setDepConfig(configRes.data.data || {});
+            } catch { toast('error', 'Failed to load balance'); }
             finally { setPageLoad(false); }
         })();
     }, [toast]);
 
     const amount   = Number(custom) || 0;
     const fmt      = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
-    const isCrypto = channel === 'trx' || channel === 'usdt';
-    const minAmt   = channel === 'usdt' ? MIN_USDT : MIN_RECHARGE;
-    const maxAmt   = isCrypto ? MAX_CRYPTO : MAX_REGULAR;
+
+    // Apply channel order + filter hidden channels
+    const orderedChannels = (() => {
+        const order = depConfig?.channelOrder;
+        const base  = (order?.length === 4 ? order : CHANNELS.map(c => c.id))
+            .map(id => CHANNELS.find(c => c.id === id))
+            .filter(Boolean);
+        return base.filter(c => depConfig?.[c.id]?.enabled !== false);
+    })();
+
+    const chCfg    = depConfig?.[channel] || {};
+    const amounts  = chCfg.amounts?.length ? chCfg.amounts : DEFAULT_AMOUNTS;
+    const minAmt   = chCfg.min  != null ? chCfg.min  : (DEFAULT_LIMITS[channel]?.min  ?? 100);
+    const maxAmt   = chCfg.max  != null ? chCfg.max  : (DEFAULT_LIMITS[channel]?.max  ?? 1_000_000);
+
+    // Reset channel selection if current channel was hidden
+    useEffect(() => {
+        if (orderedChannels.length && !orderedChannels.find(c => c.id === channel)) {
+            setChannel(orderedChannels[0].id);
+        }
+    }, [orderedChannels.map(c => c.id).join(',')]); // eslint-disable-line
+
     const tooLow   = amount > 0 && amount < minAmt;
     const tooHigh  = amount > 0 && amount > maxAmt;
     const canPay   = amount >= minAmt && amount <= maxAmt;
@@ -230,7 +258,7 @@ export default function Recharge() {
                             <div className="w-[90%] mx-auto border-b border-gray-100" />
 
                             <div className="grid grid-cols-2 gap-0">
-                                {CHANNELS.map((ch, i) => {
+                                {orderedChannels.map((ch, i) => {
                                     const active   = channel === ch.id;
                                     const Icon     = ICONS[ch.id];
                                     const isRight  = i % 2 === 1;
@@ -313,7 +341,7 @@ export default function Recharge() {
 
                                 {/* Quick amounts */}
                                 <div className="grid grid-cols-4 gap-2 mb-3">
-                                    {AMOUNTS.map(amt => {
+                                    {amounts.map(amt => {
                                         const sel = amount === amt;
                                         return (
                                             <button
@@ -327,7 +355,7 @@ export default function Recharge() {
                                                     border:     sel ? `1.5px solid ${BRAND_C}` : '1.5px solid #f3f4f6',
                                                 }}
                                             >
-                                                {amt >= 1000 ? `${amt / 1000}k` : amt}
+                                                {amt.toLocaleString('en-US')}
                                             </button>
                                         );
                                     })}
@@ -335,10 +363,10 @@ export default function Recharge() {
 
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs text-gray-400">
-                                        ₹{minAmt.toLocaleString()} – ₹{maxAmt.toLocaleString()}
+                                        ₹{minAmt} – ₹{maxAmt}
                                     </span>
                                     {tooLow  && <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Amount too low</span>}
-                                    {tooHigh && <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Max ₹{maxAmt.toLocaleString()}</span>}
+                                    {tooHigh && <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Max ₹{maxAmt}</span>}
                                 </div>
                             </div>
 
