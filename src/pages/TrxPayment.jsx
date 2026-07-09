@@ -122,28 +122,44 @@ export default function TrxPayment() {
 
     useEffect(() => {
         if (order) return;
+        const fetchOrder = () => axios.get(`/trx/check-order/${orderId}`);
         (async () => {
+            let res;
             try {
-                const res = await axios.get(`/trx/check-order/${orderId}`);
-                if (res.data.success) {
-                    setStatus(res.data.status);
-                    if (res.data.status === 'completed') {
-                        setCreditedInr(res.data.inrAmount);
-                        setCreditedTrx(res.data.expectedTrxAmount);
-                        setCreditedTxId(res.data.txId);
-                    }
-                    if (res.data.status === 'pending') {
-                        setOrder({
-                            walletAddress:     res.data.walletAddress,
-                            expectedTrxAmount: res.data.expectedTrxAmount,
-                            inrAmount:         res.data.inrAmount,
-                            expiresAt:         res.data.expiresAt,
-                        });
-                    }
+                res = await fetchOrder();
+            } catch (err) {
+                // A real "not found" (404) means the link is genuinely invalid.
+                // Anything else (network blip, timeout, transient 5xx) deserves one
+                // retry before we tell the user the link is bad — a single dropped
+                // request on a flaky mobile connection shouldn't read as "invalid".
+                if (err.response && err.response.status !== 404) {
+                    try {
+                        await new Promise(r => setTimeout(r, 800));
+                        res = await fetchOrder();
+                    } catch { setStatus('invalid'); setLoading(false); return; }
                 } else {
-                    setStatus('invalid');
+                    setStatus('invalid'); setLoading(false); return;
                 }
-            } catch { setStatus('invalid'); } finally { setLoading(false); }
+            }
+            if (res.data.success) {
+                setStatus(res.data.status);
+                if (res.data.status === 'completed') {
+                    setCreditedInr(res.data.inrAmount);
+                    setCreditedTrx(res.data.expectedTrxAmount);
+                    setCreditedTxId(res.data.txId);
+                }
+                if (res.data.status === 'pending') {
+                    setOrder({
+                        walletAddress:     res.data.walletAddress,
+                        expectedTrxAmount: res.data.expectedTrxAmount,
+                        inrAmount:         res.data.inrAmount,
+                        expiresAt:         res.data.expiresAt,
+                    });
+                }
+            } else {
+                setStatus('invalid');
+            }
+            setLoading(false);
         })();
     }, [orderId, order]);
 
@@ -238,7 +254,7 @@ export default function TrxPayment() {
                         <div className="px-6 pt-5 pb-4 text-center">
                             {creditedInr != null && (
                                 <p className="text-3xl font-semibold tracking-tight" style={{ color: SUCCESS_C }}>
-                                    +₹{Number(creditedInr).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    +₹{Number(creditedInr).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </p>
                             )}
                             <p className="text-gray-400 text-xs mt-1">credited to your balance</p>
@@ -354,7 +370,10 @@ export default function TrxPayment() {
             <div className={INNER} style={{ height: '100dvh' }}>
 
                 {/* Header */}
-                <div className="flex-shrink-0 bg-white border-b border-gray-100 flex items-center justify-between px-4 py-3.5">
+                <div
+                    className="flex-shrink-0 bg-white flex items-center justify-between px-4 py-3.5 relative z-10"
+                    style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' }}
+                >
                     <button
                         onClick={closeTab}
                         className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform bg-gray-50 border border-gray-200"
@@ -368,7 +387,7 @@ export default function TrxPayment() {
                         <p className="text-gray-800 font-bold text-base">TRX Payment</p>
                     </div>
                     <div
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${isUrgent ? 'animate-pulse' : ''}`}
                         style={isUrgent
                             ? { background: '#fff1f2', borderColor: '#fecaca', color: '#ef4444' }
                             : { background: '#fff5f0', borderColor: '#ffd0c8', color: TRX_COLOR }
@@ -386,57 +405,65 @@ export default function TrxPayment() {
                     <div className="rounded-2xl p-4 text-white relative overflow-hidden" style={{ background: TRX_GRAD }}>
                         <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/10" />
                         <div className="absolute -bottom-5 -left-4 w-24 h-24 rounded-full bg-black/10" />
+                        <div
+                            className="absolute inset-0 opacity-[0.06] pointer-events-none"
+                            style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 1px, transparent 12px)' }}
+                        />
                         <div className="relative flex items-center gap-4">
                             <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' }}>
                                 <TrxLogo size={38} />
                             </div>
                             <div>
                                 <p className="text-white font-bold text-lg leading-tight">Send TRX</p>
-                                <p className="text-white/70 text-xs mt-1">TRON network</p>
-                                <span className="mt-2 inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-white/20 text-white">
+                                <span className="mt-2 inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-white/20 text-white tracking-wide">
                                     TRON NETWORK
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Address card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Wallet Address</span>
-                            <CopyBtn text={walletAddress} />
-                        </div>
-                        <p className="text-gray-700 text-[13px] font-mono font-semibold break-all leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100">
-                            {walletAddress}
-                        </p>
-                    </div>
+                    {/* Deposit address card — QR + wallet address */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="h-1" style={{ background: TRX_GRAD }} />
+                        <div className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Deposit Address</span>
+                                <CopyBtn text={walletAddress} />
+                            </div>
 
-                    {/* QR code */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col items-center gap-3">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide self-start">Scan QR Code</span>
-                        <div className="p-3 rounded-2xl" style={{ border: '2px solid #fecaca' }}>
-                            <img src={qrUrl} alt="Wallet QR" width={180} height={180} className="block rounded-lg" />
+                            <div className="flex flex-col items-center gap-3 py-1">
+                                <div className="p-3 rounded-2xl" style={{ border: '2px solid #fecaca' }}>
+                                    <img src={qrUrl} alt="Wallet QR" width={168} height={168} className="block rounded-lg" />
+                                </div>
+                                <p className="text-[11px] text-gray-400">Scan with your crypto wallet app</p>
+                            </div>
+
+                            <div className="h-px bg-gray-100 my-3.5" />
+
+                            <p className="text-gray-700 text-[12.5px] font-mono font-semibold break-all leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
+                                {walletAddress}
+                            </p>
                         </div>
-                        <p className="text-[11px] text-gray-400">Scan with your crypto wallet app</p>
                     </div>
 
                     {/* Amount card */}
-                    <div className="bg-white rounded-2xl border shadow-sm p-4" style={{ borderColor: '#fecaca' }}>
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Amount to Send</span>
-                            <CopyBtn text={String(trxAmount)} label="Copy amount" />
+                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#fecaca' }}>
+                        <div className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Amount to Send</span>
+                                <CopyBtn text={String(trxAmount)} label="Copy amount" />
+                            </div>
+                            <div className="flex items-end gap-2">
+                                <span className="text-3xl font-extrabold text-gray-800 tracking-tight">{trxAmount}</span>
+                                <span className="text-base font-bold mb-0.5" style={{ color: TRX_COLOR }}>TRX</span>
+                            </div>
                         </div>
-                        <div className="flex items-end gap-2 mb-2">
-                            <span className="text-3xl font-extrabold text-gray-800 tracking-tight">{trxAmount}</span>
-                            <span className="text-base font-bold mb-0.5" style={{ color: TRX_COLOR }}>TRX</span>
-                        </div>
-                        <div className="h-px bg-gray-100 my-3" />
-                        <div className="flex items-center gap-2">
+                        <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#fff8f6', borderTop: '1px solid #fecaca' }}>
                             <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BRAND }}>
                                 <Zap size={12} className="text-white" />
                             </div>
                             <p className="text-sm font-semibold text-gray-600">
-                                ₹{Number(inrAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} will be credited instantly
+                                ₹{Number(inrAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} will be credited instantly
                             </p>
                         </div>
                     </div>

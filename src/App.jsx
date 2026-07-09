@@ -32,12 +32,15 @@ import TransferRecords from './pages/TransferRecords';
 import UsdtPayment from './pages/UsdtPayment';
 import TrxPayment from './pages/TrxPayment';
 import AgencyCenter from './pages/AgencyCenter';
+import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
 
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ErrorBoundary>
         <Routes>
 
           <Route path="/register/:referralCode?" element={<Register />} />
@@ -99,10 +102,10 @@ function App() {
 
           </Route>
 
+          <Route path="*" element={<NotFound />} />
 
         </Routes>
-
-
+        </ErrorBoundary>
 
       </BrowserRouter>
     </AuthProvider>

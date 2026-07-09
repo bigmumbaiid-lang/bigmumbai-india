@@ -68,16 +68,39 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
+            const fetchMe = () => axios.get("/user/me");
+
             try {
-                const res = await axios.get("/user/me");
+                let res;
+                try {
+                    res = await fetchMe();
+                } catch (err) {
+                    // One retry for transient failures (flaky mobile network right after
+                    // opening a new tab, brief timeout, etc.) before giving up — avoids
+                    // bouncing a validly-logged-in user to /login over a single blip.
+                    if (err.response?.status === 401 || err.response?.status === 403) throw err;
+                    await new Promise(r => setTimeout(r, 800));
+                    res = await fetchMe();
+                }
 
                 setUser(res.data.user);
                 setToken(token);
 
             } catch (err) {
-                localStorage.removeItem("token");
-                setUser(null);
-                setToken(null);
+                // Only a genuine auth failure (invalid/expired token) should sign the
+                // user out. A network blip, timeout, or server error here must NOT
+                // wipe the token — it lives in localStorage and is shared by every
+                // same-origin tab, so clearing it on a transient failure (e.g. right
+                // after opening a trx/usdt payment tab on a flaky mobile connection)
+                // silently logs the user out of the main app tab as well.
+                const status = err.response?.status;
+                if (status === 401 || status === 403) {
+                    localStorage.removeItem("token");
+                    setUser(null);
+                    setToken(null);
+                } else {
+                    setToken(token);
+                }
             }
 
             setLoading(false);
@@ -95,7 +118,14 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, token, login, logout, loading, setUser, setBalance }}>
-            {!loading && children}
+            {loading ? (
+                // Was a bare blank screen before — on a slow/flaky connection the
+                // session check can take a few seconds, which read as the app
+                // being frozen. Show a spinner instead of nothing.
+                <div className="flex items-center justify-center bg-gray-50 min-h-screen" style={{ minHeight: '100dvh' }}>
+                    <div className="w-8 h-8 border-2 border-gray-200 rounded-full animate-spin" style={{ borderTopColor: '#b1835a' }} />
+                </div>
+            ) : children}
         </AuthContext.Provider>
     );
 };

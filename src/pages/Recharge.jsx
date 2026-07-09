@@ -3,6 +3,7 @@ import axios from '../utils/axios';
 import BottomNav from '../components/BottomNav';
 import BackButton from '../components/BackButton';
 import { useNavigate } from 'react-router-dom';
+import { Check, X, AlertTriangle } from 'lucide-react';
 
 const DEFAULT_AMOUNTS    = [100, 500, 1000, 2000, 5000, 10000, 20000, 50000];
 const DEFAULT_LIMITS = {
@@ -66,9 +67,21 @@ const ICONS = { watchpays: WatchSVG, jazpays: JazSVG, bondpay: BondSVG, trx: Trx
 
 /* ── Modal config ── */
 const MODAL_CFG = {
-    success: { title: 'Success',              d: 'M5 13l4 4L19 7' },
-    error:   { title: 'Something went wrong', d: 'M12 2.5L2 21.5h20zM12 9v5M12 16.5h.01' },
-    warning: { title: 'Heads up',             d: 'M12 8v5m0 3.5h.01' },
+    success: {
+        title: 'Success', Icon: Check,
+        grad: 'linear-gradient(135deg, #34d399 0%, #059669 100%)',
+        ring: '#86efac', shadow: 'rgba(5,150,105,0.35)',
+    },
+    error: {
+        title: 'Something went wrong', Icon: X,
+        grad: 'linear-gradient(135deg, #f87171 0%, #dc2626 100%)',
+        ring: '#fca5a5', shadow: 'rgba(220,38,38,0.3)',
+    },
+    warning: {
+        title: 'Heads up', Icon: AlertTriangle,
+        grad: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+        ring: '#fde68a', shadow: 'rgba(217,119,6,0.3)',
+    },
 };
 
 /* ══════════════════════════════════════════════════ */
@@ -171,7 +184,7 @@ export default function Recharge() {
                 if (url) { const w = window.open(url, '_blank'); if (!w || w.closed) window.location.href = url; }
                 else toast('error', 'No payment URL received.');
             }
-        } catch (e) { toast('error', e.response?.data?.message || 'Payment failed. Try again.'); }
+        } catch (e) { toast('error', e.response?.data?.error || e.response?.data?.message || 'Payment failed. Try again.'); }
         finally     { setLoading(false); }
     };
 
@@ -266,6 +279,15 @@ export default function Recharge() {
 
                             <div className="w-[90%] mx-auto border-b border-gray-100" />
 
+                            {pageLoad ? (
+                                // How many channels end up visible depends on config we
+                                // haven't fetched yet, so this doesn't try to mimic
+                                // individual cards — just a generic loading block sized
+                                // to roughly where the grid will land.
+                                <div className="p-4">
+                                    <div className="h-[168px] w-full rounded-xl bg-gray-100 animate-pulse" />
+                                </div>
+                            ) : (
                             <div className="grid grid-cols-2 gap-0">
                                 {orderedChannels.map((ch, i) => {
                                     const active    = channel === ch.id;
@@ -324,6 +346,7 @@ export default function Recharge() {
                                     );
                                 })}
                             </div>
+                            )}
                         </div>
 
                         {/* ── Amount card ── */}
@@ -494,26 +517,37 @@ export default function Recharge() {
             {modal && mcfg && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center animate-fadeIn px-8"
-                    style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)' }}
+                    style={{ background: 'rgba(15,15,20,0.45)', backdropFilter: 'blur(3px)' }}
                     onClick={clear}
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-2xl px-6 py-6 flex flex-col items-center max-w-[280px] w-full animate-popIn"
-                        style={{ border: '1px solid #f3f4f6' }}
+                        className="relative bg-white rounded-3xl shadow-2xl px-7 py-7 flex flex-col items-center max-w-[300px] w-full animate-popIn overflow-hidden"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-                            style={{ background: 'linear-gradient(135deg,#f5ede4,#e8d5c0)' }}>
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ color: BRAND_C }}>
-                                <path d={mcfg.d} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="animate-drawCheck" />
-                            </svg>
+                        {/* Ambient glow behind icon */}
+                        <div
+                            className="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full opacity-25 blur-2xl pointer-events-none"
+                            style={{ background: mcfg.grad }}
+                        />
+
+                        {/* Icon badge */}
+                        <div className="relative flex items-center justify-center mb-4">
+                            <div className="absolute w-20 h-20 rounded-full" style={{ border: `2px solid ${mcfg.ring}` }} />
+                            <div
+                                className="relative w-16 h-16 rounded-full flex items-center justify-center animate-popIn"
+                                style={{ background: mcfg.grad, boxShadow: `0 10px 24px ${mcfg.shadow}` }}
+                            >
+                                <mcfg.Icon size={28} className="text-white" strokeWidth={2.5} />
+                            </div>
                         </div>
-                        <p className="font-semibold text-[#1e2637] text-center mb-1">{modal.title}</p>
-                        {modal.msg && <p className="text-gray-400 text-xs text-center leading-relaxed">{modal.msg}</p>}
+
+                        <p className="relative font-bold text-[#1e2637] text-[15px] text-center mb-1.5">{modal.title}</p>
+                        {modal.msg && <p className="relative text-gray-400 text-[13px] text-center leading-relaxed">{modal.msg}</p>}
+
                         <button
                             onClick={clear}
-                            className="mt-4 w-full py-2.5 rounded-xl text-white text-sm font-semibold active:scale-95 transition-transform"
-                            style={{ background: HDR_GRAD }}
+                            className="relative mt-5 w-full py-3 rounded-2xl text-white text-sm font-semibold active:scale-95 transition-transform"
+                            style={{ background: mcfg.grad, boxShadow: `0 8px 20px ${mcfg.shadow}` }}
                         >Got it</button>
                     </div>
                 </div>
@@ -523,11 +557,9 @@ export default function Recharge() {
                 @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
                 @keyframes slideUp   { from{transform:translateY(100%)} to{transform:translateY(0)} }
                 @keyframes popIn     { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
-                @keyframes drawCheck { from{stroke-dasharray:40;stroke-dashoffset:40} to{stroke-dasharray:40;stroke-dashoffset:0} }
                 .animate-fadeIn    { animation:fadeIn  .18s ease-out; }
                 .animate-slideUp   { animation:slideUp .3s cubic-bezier(.16,1,.3,1); }
                 .animate-popIn     { animation:popIn   .25s cubic-bezier(.16,1,.3,1); }
-                .animate-drawCheck { animation:drawCheck .4s ease-out .1s both; }
                 .animate-spin      { animation:spin .7s linear infinite; }
                 @keyframes spin    { to{transform:rotate(360deg)} }
             `}</style>

@@ -2,6 +2,10 @@ import axios from "axios";
 
 const instance = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:4000/api',
+  // Without a timeout, a request to an unreachable/misrouted host hangs until
+  // the OS/browser gives up on its own (can be 30s+ on mobile) — this caps it
+  // so a bad connection fails fast with a clear error instead of looking frozen.
+  timeout: 15000,
 });
 
 instance.interceptors.request.use((config) => {
