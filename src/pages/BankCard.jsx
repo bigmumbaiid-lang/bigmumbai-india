@@ -173,10 +173,6 @@ function BankCard() {
         }
     };
 
-    const maskedAccount = formData.bankAccount
-        ? `•••• ${formData.bankAccount.slice(-4)}`
-        : '•••• ••••';
-
     const ifscVerified = !!ifscLookup && !errors.ifscCode;
 
     return (
@@ -185,51 +181,82 @@ function BankCard() {
                 className="w-full lg:max-w-[400px] mx-auto h-screen flex flex-col overflow-hidden shadow-2xl border border-gray-200 relative"
                 style={{ height: '100dvh', background: '#f8fafc' }}
             >
+                {/* Ambient backdrop glow */}
+                <div className="absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-25 blur-3xl pointer-events-none" style={{ background: BRAND_GRADIENT }} />
+                <div className="absolute top-40 -right-20 w-48 h-48 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: BRAND_GRADIENT }} />
+
                 {/* ── Header ── */}
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 relative z-10">
                     <BackButton label="Bank Card" />
                 </div>
 
                 {/* ── Scrollable body ── */}
                 <div
-                    className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-3 space-y-3"
+                    className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-3 space-y-3 relative z-10"
                     style={{ WebkitOverflowScrolling: 'touch' }}
                 >
-                    {/* ── Compact hero strip ── */}
+                    {/* ── Bank card mockup ── */}
                     {pageLoading ? (
-                        <div className="h-[76px] w-full bg-gray-100 animate-pulse rounded-2xl" />
+                        <div className="h-[190px] w-full bg-gray-100 animate-pulse rounded-3xl" />
                     ) : (
                         <div
-                            className="rounded-2xl px-4 text-white relative overflow-hidden flex items-center gap-3"
-                            style={{ background: BRAND_GRADIENT, height: 76 }}
+                            className="rounded-3xl p-5 text-white relative overflow-hidden"
+                            style={{
+                                background: 'linear-gradient(150deg, #191531 0%, #26204a 45%, #3d2a5e 85%, #4a2d5f 100%)',
+                                minHeight: 190,
+                                boxShadow: '0 20px 45px -14px rgba(25,15,45,0.55)',
+                            }}
                         >
-                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
-                            <div className="absolute -bottom-8 right-10 w-20 h-20 rounded-full bg-black/10 pointer-events-none" />
+                            {/* Decorative glow + shine */}
+                            <div className="absolute -bottom-16 -right-10 w-48 h-48 rounded-full bg-white/[0.06] pointer-events-none" />
+                            <div className="absolute -top-14 -left-10 w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none" />
+                            <div className="absolute top-0 left-0 right-0 h-px bg-white/10" />
 
-                            <div className="relative w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                                <AccountBalanceIcon sx={{ fontSize: 20 }} className="text-white/90" />
+                            {/* Top row: label + bank name */}
+                            <div className="relative flex items-start justify-between mb-7">
+                                <span className="text-[12px] text-white/50 lowercase tracking-wide">
+                                    bank card{isExisting && (cardVerified ? ' · verified' : ' · pending')}
+                                </span>
+                                <span className="text-[15px] font-extrabold tracking-wide truncate max-w-[150px] text-right">
+                                    {(formData.bankName || 'BANK').toUpperCase()}
+                                </span>
                             </div>
 
-                            <div className="relative flex-1 min-w-0">
-                                <p className="text-[13px] font-bold truncate leading-tight">
-                                    {formData.bankName || 'Your Bank'}
-                                </p>
-                                <p className="text-[11px] font-mono text-white/75 mt-0.5 tracking-wider">
-                                    {maskedAccount}
-                                </p>
-                                {ifscLookup?.branch && (
-                                    <p className="text-[9px] text-white/50 mt-0.5 truncate">
-                                        {ifscLookup.branch}{ifscLookup.city ? ` · ${ifscLookup.city}` : ''}
+                            {/* Chip */}
+                            <div className="relative w-10 h-7 rounded-md flex flex-col justify-center gap-[3px] px-1.5 mb-6"
+                                style={{ background: 'linear-gradient(135deg, #cfe8ad, #9dc97a)' }}>
+                                <div className="h-[2px] w-full bg-black/20 rounded-full" />
+                                <div className="h-[2px] w-full bg-black/20 rounded-full" />
+                                <div className="h-[2px] w-full bg-black/20 rounded-full" />
+                            </div>
+
+                            {/* Account number */}
+                            <div className="relative flex justify-between mb-6 pr-1">
+                                {(formData.bankAccount
+                                    ? ['••••', '••••', '••••', formData.bankAccount.slice(-4)]
+                                    : ['••••', '••••', '••••', '••••']
+                                ).map((g, i) => (
+                                    <span key={i} className="font-mono text-[19px] font-semibold tracking-widest text-white/95">{g}</span>
+                                ))}
+                            </div>
+
+                            {/* Bottom row: IFSC info + brand mark */}
+                            <div className="relative flex items-end justify-between">
+                                <div>
+                                    <p className="text-[9px] text-white/45 uppercase tracking-widest leading-none">IFSC</p>
+                                    <p className="text-[12px] font-mono font-semibold text-white/85 mt-1.5">
+                                        <span className="text-white/40 mr-1">▸</span>
+                                        {formData.ifscCode || '----------'}
                                     </p>
-                                )}
+                                </div>
+                                <div className="flex items-center shrink-0">
+                                    <div className="w-7 h-7 rounded-full opacity-90" style={{ background: '#e2b97a' }} />
+                                    <div className="w-7 h-7 rounded-full opacity-80 -ml-3" style={{ background: '#b1835a', mixBlendMode: 'plus-lighter' }} />
+                                </div>
                             </div>
 
-                            <div className="relative shrink-0 text-right">
-                                <p className="text-[9px] text-white/50 uppercase tracking-widest">Holder</p>
-                                <p className="text-[11px] font-semibold text-white/85 mt-0.5 max-w-[90px] truncate">
-                                    {formData.actualName || 'Account holder'}
-                                </p>
-                            </div>
+                            {/* Corner accent */}
+                            <span className="absolute bottom-4 left-5 text-white/25 text-sm">◂</span>
                         </div>
                     )}
 

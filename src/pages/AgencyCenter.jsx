@@ -16,7 +16,7 @@ const DATE_OPTS = [
 ];
 
 const SOURCE_NOTE = {
-    watchpays: 'WatchPay', jazpays: 'JazPay',
+    watchpays: 'WatchPay', jazpays: 'JazPay', bondpay: 'BondPay',
     usdt: 'USDT TRC20', trx: 'TRX', gateway: 'Gateway',
 };
 

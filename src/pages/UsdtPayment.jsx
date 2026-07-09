@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Copy, Check, RefreshCw, X, Zap, Clock } from 'lucide-react';
+import { Copy, Check, RefreshCw, X, Zap, Clock, Globe, ArrowUpRight, Hash, Link2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import axios from '../utils/axios';
 
 const POLL_INTERVAL_MS = 10_000;
-const BRAND       = 'linear-gradient(135deg, #d9ad82 0%, #b1835a 100%)';
-const BRAND_C     = '#b1835a';
-const USDT_COLOR  = '#26a17b';
-const USDT_GRAD   = 'linear-gradient(135deg, #26a17b 0%, #1a7a5e 100%)';
+const BRAND         = 'linear-gradient(135deg, #d9ad82 0%, #b1835a 100%)';
+const BRAND_C       = '#b1835a';
+const USDT_COLOR    = '#26a17b';
+const USDT_GRAD     = 'linear-gradient(135deg, #26a17b 0%, #1a7a5e 100%)';
+const SUCCESS_GRAD  = 'linear-gradient(135deg, #34d399 0%, #059669 100%)';
+const SUCCESS_C     = '#059669';
 
 const UsdtLogo = ({ size = 32 }) => (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
@@ -73,6 +75,25 @@ function CopyBtn({ text, label = 'Copy' }) {
     );
 }
 
+function CopyIconBtn({ text }) {
+    const [copied, setCopied] = useState(false);
+    const t = useRef(null);
+    const go = () => copyText(text).then(() => {
+        setCopied(true);
+        clearTimeout(t.current);
+        t.current = setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
+    return (
+        <button
+            onClick={go}
+            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+            style={{ background: copied ? '#f0fdf4' : '#f9fafb', color: copied ? '#16a34a' : '#9ca3af' }}
+        >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
+    );
+}
+
 const OUTER = 'flex items-center justify-center bg-gray-50 min-h-screen';
 const INNER = 'w-full lg:max-w-[400px] mx-auto h-screen flex flex-col overflow-hidden shadow-2xl border border-gray-200 bg-[#f7f8ff]';
 
@@ -84,7 +105,9 @@ export default function UsdtPayment() {
     const [order, setOrder]             = useState(state?.order || null);
     const [status, setStatus]           = useState('pending');
     const [loading, setLoading]         = useState(!state?.order);
-    const [creditedInr, setCreditedInr] = useState(null);
+    const [creditedInr, setCreditedInr]   = useState(null);
+    const [creditedUsdt, setCreditedUsdt] = useState(null);
+    const [creditedTxId, setCreditedTxId] = useState(null);
     const [liveBalance, setLiveBalance] = useState(null);
     const [showCancel, setShowCancel]   = useState(false);
     const [cancelling, setCancelling]   = useState(false);
@@ -103,7 +126,11 @@ export default function UsdtPayment() {
                 const res = await axios.get(`/usdt/check-order/${orderId}`);
                 if (res.data.success) {
                     setStatus(res.data.status);
-                    if (res.data.status === 'completed') setCreditedInr(res.data.inrAmount);
+                    if (res.data.status === 'completed') {
+                        setCreditedInr(res.data.inrAmount);
+                        setCreditedUsdt(res.data.expectedUsdtAmount);
+                        setCreditedTxId(res.data.txId);
+                    }
                     if (res.data.status === 'pending') {
                         setOrder({
                             walletAddress:      res.data.walletAddress,
@@ -112,8 +139,10 @@ export default function UsdtPayment() {
                             expiresAt:          res.data.expiresAt,
                         });
                     }
+                } else {
+                    setStatus('invalid');
                 }
-            } catch { } finally { setLoading(false); }
+            } catch { setStatus('invalid'); } finally { setLoading(false); }
         })();
     }, [orderId, order]);
 
@@ -124,6 +153,8 @@ export default function UsdtPayment() {
             if (res.data.status === 'completed') {
                 setStatus('completed');
                 setCreditedInr(res.data.inrAmount);
+                setCreditedUsdt(res.data.expectedUsdtAmount);
+                setCreditedTxId(res.data.txId);
                 clearInterval(pollRef.current);
             } else if (res.data.status === 'expired' || res.data.status === 'cancelled') {
                 setStatus('expired');
@@ -182,28 +213,106 @@ export default function UsdtPayment() {
     if (status === 'completed') return (
         <div className={OUTER} style={{ minHeight: '100dvh' }}>
             <div className={INNER} style={{ height: '100dvh' }}>
-                <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5">
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute w-32 h-32 rounded-full opacity-20 blur-2xl" style={{ background: BRAND }} />
-                        <div className="relative w-24 h-24 rounded-full flex items-center justify-center shadow-lg" style={{ background: BRAND }}>
-                            <Check size={40} className="text-white" strokeWidth={3} />
+                <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative overflow-hidden">
+                    {/* Ambient glows */}
+                    <div className="absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: SUCCESS_GRAD }} />
+                    <div className="absolute -bottom-20 -right-16 w-64 h-64 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: USDT_GRAD }} />
+
+                    {/* Success badge */}
+                    <div className="animate-popIn relative flex items-center justify-center mb-5 shrink-0">
+                        <div className="absolute w-32 h-32 rounded-full opacity-20 blur-2xl" style={{ background: SUCCESS_GRAD }} />
+                        <div className="absolute w-24 h-24 rounded-full" style={{ border: '2px solid #86efac' }} />
+                        <div className="relative w-[72px] h-[72px] rounded-full flex items-center justify-center" style={{ background: SUCCESS_GRAD, boxShadow: '0 10px 26px rgba(5,150,105,0.35)' }}>
+                            <Check size={32} className="text-white" strokeWidth={3} />
                         </div>
                     </div>
+
+                    <p className="animate-fadeUp text-gray-800 text-lg font-semibold">Payment Successful</p>
+                    <p className="animate-fadeUp text-gray-400 text-xs mt-1 mb-5">Confirmed on the TRON network</p>
+
+                    {/* Receipt card */}
+                    <div className="animate-fadeUp relative z-10 w-full bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                        <div className="h-1.5" style={{ background: USDT_GRAD }} />
+
+                        <div className="px-6 pt-5 pb-4 text-center">
+                            {creditedInr != null && (
+                                <p className="text-3xl font-semibold tracking-tight" style={{ color: SUCCESS_C }}>
+                                    +₹{Number(creditedInr).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </p>
+                            )}
+                            <p className="text-gray-400 text-xs mt-1">credited to your balance</p>
+                        </div>
+
+                        <div className="mx-6 border-t border-dashed border-gray-200" />
+
+                        <div className="px-6 py-4 space-y-3.5">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2 text-gray-400"><Globe size={14} /> Network</span>
+                                <span className="font-medium text-gray-700">USDT · TRC20</span>
+                            </div>
+                            {creditedUsdt != null && (
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-gray-400"><ArrowUpRight size={14} /> Amount Sent</span>
+                                    <span className="font-medium text-gray-700">{Number(creditedUsdt).toFixed(2)} USDT</span>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2 text-gray-400"><Hash size={14} /> Order ID</span>
+                                <span className="flex items-center gap-2">
+                                    <span className="font-mono font-medium text-gray-700" title={orderId}>{orderId.slice(0, 6)}…{orderId.slice(-6)}</span>
+                                    <CopyIconBtn text={orderId} />
+                                </span>
+                            </div>
+                            {creditedTxId && (
+                                <div className="flex items-center justify-between text-sm gap-3">
+                                    <span className="flex items-center gap-2 text-gray-400 shrink-0"><Link2 size={14} /> Tx Hash</span>
+                                    <span className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono font-medium text-gray-700 truncate" title={creditedTxId}>
+                                            {creditedTxId.slice(0, 6)}…{creditedTxId.slice(-6)}
+                                        </span>
+                                        <CopyIconBtn text={creditedTxId} />
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={closeTab}
+                        className="animate-fadeUp relative z-10 w-full mt-6 px-10 py-3.5 rounded-2xl text-white font-medium text-sm shadow-lg active:scale-[0.97] transition-transform"
+                        style={{ background: USDT_GRAD, boxShadow: '0 8px 20px rgba(26,122,94,0.3)' }}
+                    >
+                        Done
+                    </button>
+                </div>
+
+                <style>{`
+                    @keyframes popIn  { 0%{opacity:0;transform:scale(.5)} 60%{opacity:1;transform:scale(1.06)} 100%{transform:scale(1)} }
+                    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+                    .animate-popIn  { animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both; }
+                    .animate-fadeUp { animation:fadeUp .4s ease-out .15s both; }
+                `}</style>
+            </div>
+        </div>
+    );
+
+    if (status === 'invalid') return (
+        <div className={OUTER} style={{ minHeight: '100dvh' }}>
+            <div className={INNER} style={{ height: '100dvh' }}>
+                <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5">
+                    <div className="w-24 h-24 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center">
+                        <AlertTriangle size={36} className="text-red-400" />
+                    </div>
                     <div className="text-center space-y-2">
-                        <p className="text-gray-800 text-2xl font-extrabold tracking-tight">Payment Received!</p>
-                        {creditedInr && (
-                            <p className="text-2xl font-bold" style={{ color: BRAND_C }}>
-                                +₹{Number(creditedInr).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                            </p>
-                        )}
-                        <p className="text-gray-400 text-sm">Confirmed on the TRON network.</p>
+                        <p className="text-gray-800 text-2xl font-semibold">Invalid Payment Link</p>
+                        <p className="text-gray-400 text-sm">This payment link is invalid or no longer exists. Please start a new recharge.</p>
                     </div>
                     <button
                         onClick={closeTab}
-                        className="px-10 py-3.5 rounded-2xl text-white font-bold text-sm shadow-lg active:scale-[0.97] transition-transform mt-2"
+                        className="flex items-center gap-2 px-10 py-3.5 rounded-2xl text-white font-medium text-sm shadow-lg active:scale-[0.97] transition-transform"
                         style={{ background: BRAND }}
                     >
-                        Done
+                        <ArrowLeft size={16} /> Go Back
                     </button>
                 </div>
             </div>

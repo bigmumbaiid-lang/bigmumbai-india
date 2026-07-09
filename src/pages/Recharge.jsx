@@ -8,6 +8,7 @@ const DEFAULT_AMOUNTS    = [100, 500, 1000, 2000, 5000, 10000, 20000, 50000];
 const DEFAULT_LIMITS = {
     watchpays: { min: 100,  max: 80_000   },
     jazpays:   { min: 100,  max: 80_000   },
+    bondpay:   { min: 100,  max: 80_000   },
     trx:       { min: 100,  max: 1_000_000 },
     usdt:      { min: 5000, max: 1_000_000 },
 };
@@ -19,6 +20,7 @@ const BTN_C          = '#BA8D63';
 const CHANNELS = [
     { id: 'watchpays', label: 'Watch Pay',  sub: 'Gateway',      g1: '#8b5cf6', g2: '#6d28d9' },
     { id: 'jazpays',   label: 'Jaz Pay',    sub: 'Gateway',      g1: '#3b82f6', g2: '#1d4ed8' },
+    { id: 'bondpay',   label: 'BondPay',    sub: 'Gateway',      g1: '#fb923c', g2: '#c2410c' },
     { id: 'trx',       label: 'TRX',        sub: 'TRON Network', g1: '#ef4444', g2: '#b91c1c' },
     { id: 'usdt',      label: 'USDT TRC20', sub: 'Tether',       g1: '#10b981', g2: '#047857' },
 ];
@@ -40,6 +42,13 @@ const JazSVG = () => (
         <rect x="19" y="14" width="2.5" height="2.5" rx="0.5" fill="#3b82f6" opacity="0.75" />
     </svg>
 );
+const BondSVG = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="6" width="20" height="13" rx="3" fill="white" opacity="0.9" />
+        <circle cx="12" cy="12.5" r="3.2" fill="none" stroke="#c2410c" strokeWidth="1.6" opacity="0.9" />
+        <path d="M10.4 12.6l1.1 1.1 2.1-2.3" stroke="#c2410c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
+    </svg>
+);
 const TrxSVG = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
         <polygon points="12,3 22,11 12,21 2,11" fill="white" opacity="0.3" />
@@ -53,7 +62,7 @@ const UsdtSVG = () => (
         <rect x="7.5" y="17.5" width="9" height="1.8" rx="0.9" fill="white" opacity="0.6" />
     </svg>
 );
-const ICONS = { watchpays: WatchSVG, jazpays: JazSVG, trx: TrxSVG, usdt: UsdtSVG };
+const ICONS = { watchpays: WatchSVG, jazpays: JazSVG, bondpay: BondSVG, trx: TrxSVG, usdt: UsdtSVG };
 
 /* ── Modal config ── */
 const MODAL_CFG = {
@@ -104,7 +113,7 @@ export default function Recharge() {
     // Apply channel order + filter hidden channels
     const orderedChannels = (() => {
         const order = depConfig?.channelOrder;
-        const base  = (order?.length === 4 ? order : CHANNELS.map(c => c.id))
+        const base  = (order?.length === CHANNELS.length ? order : CHANNELS.map(c => c.id))
             .map(id => CHANNELS.find(c => c.id === id))
             .filter(Boolean);
         return base.filter(c => depConfig?.[c.id]?.enabled !== false);
@@ -259,24 +268,25 @@ export default function Recharge() {
 
                             <div className="grid grid-cols-2 gap-0">
                                 {orderedChannels.map((ch, i) => {
-                                    const active   = channel === ch.id;
-                                    const Icon     = ICONS[ch.id];
-                                    const isRight  = i % 2 === 1;
-                                    const isBottom = i >= 2;
-                                    return (
+                                    const active    = channel === ch.id;
+                                    const Icon      = ICONS[ch.id];
+                                    // A lone trailing channel is centered in its own full-width row
+                                    // (same card size as the rest) instead of leaving an empty gap.
+                                    const isLastOdd = orderedChannels.length % 2 === 1 && i === orderedChannels.length - 1;
+                                    const isRight   = !isLastOdd && i % 2 === 1;
+                                    const isBottom  = i >= 2;
+                                    const card = (
                                         <button
-                                            key={ch.id}
                                             onClick={() => setChannel(ch.id)}
-                                            className="flex flex-col items-center gap-1.5 py-3 px-3 transition-all active:scale-95 relative"
+                                            className={`flex flex-col items-center gap-1.5 py-3 px-3 transition-all active:scale-95 relative ${isLastOdd ? 'w-1/2' : 'w-full'}`}
                                             style={{
                                                 background: active ? '#fdf6ee' : 'white',
-                                                borderRight:  isRight  ? 'none' : '1px solid #f3f3f3',
-                                                borderTop:    isBottom ? '1px solid #f3f3f3' : 'none',
+                                                borderRight: isRight ? 'none' : '1px solid #f3f3f3',
                                             }}
                                         >
                                             {/* Icon badge */}
                                             <div
-                                                className="w-9 h-9 rounded-full flex items-center justify-center"
+                                                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
                                                 style={{
                                                     background: `linear-gradient(135deg, ${ch.g1}, ${ch.g2})`,
                                                     boxShadow: active ? `0 3px 8px ${ch.g1}55` : `0 2px 6px ${ch.g1}30`,
@@ -302,6 +312,15 @@ export default function Recharge() {
                                                 />
                                             )}
                                         </button>
+                                    );
+                                    return isLastOdd ? (
+                                        <div key={ch.id} className="col-span-2 flex justify-start" style={{ borderTop: '1px solid #f3f3f3' }}>
+                                            {card}
+                                        </div>
+                                    ) : (
+                                        <div key={ch.id} style={{ borderTop: isBottom ? '1px solid #f3f3f3' : 'none' }}>
+                                            {card}
+                                        </div>
                                     );
                                 })}
                             </div>
