@@ -11,6 +11,7 @@
 import { useContext } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import AnnouncementGate from "./AnnouncementGate";
 
 const ProtectedRoute = () => {
 
@@ -18,7 +19,14 @@ const ProtectedRoute = () => {
 
   if (loading) return null; // or spinner
 
-  return user ? <Outlet /> : <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
+
+  return (
+    <>
+      <AnnouncementGate />
+      <Outlet />
+    </>
+  );
 };
 
 export default ProtectedRoute;

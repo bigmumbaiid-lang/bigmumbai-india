@@ -29,6 +29,7 @@ function Profile() {
     const [profile, setProfile]               = useState(null)
     const { user, logout }                    = useContext(AuthContext)
     const [money, setMoney]                   = useState()
+    const [profileLoading, setProfileLoading]  = useState(true)
     const [showCopied, setShowCopied]         = useState(false)
     const [showTransferTip, setShowTransferTip] = useState(false)
     const [tipPos, setTipPos]                  = useState({ right: 8, arrowRight: 0, y: 0 })
@@ -68,6 +69,8 @@ function Profile() {
                 setProfile(response.data.user)
             } catch (error) {
                 console.log(error)
+            } finally {
+                setProfileLoading(false)
             }
         }
         fetchProfile()
@@ -114,12 +117,16 @@ function Profile() {
                         style={{ background: 'linear-gradient(160deg, #d9ad82 0%, #b1835a 100%)' }}
                     >
                         <div className="flex items-center">
-                            <img
-                                src={resolveAvatar(profile?.image || user?.image)}
-                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = profileIcon }}
-                                className="w-14 h-14 rounded-full border-2 border-white/50 object-cover"
-                                alt="profile"
-                            />
+                            {profileLoading ? (
+                                <div className="w-14 h-14 rounded-full border-2 border-white/50 bg-white/25 animate-pulse" />
+                            ) : (
+                                <img
+                                    src={resolveAvatar(profile?.image || user?.image)}
+                                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = profileIcon }}
+                                    className="w-14 h-14 rounded-full border-2 border-white/50 object-cover"
+                                    alt="profile"
+                                />
+                            )}
                             <div
                                 onClick={copyToClipboard}
                                 className="bg-[#feaa57] backdrop-blur px-3 py-1 flex items-center ml-4 rounded-2xl text-white cursor-pointer active:scale-95 transition-transform"
@@ -139,7 +146,11 @@ function Profile() {
                         {/* Balance + actions card */}
                         <div className="bg-white py-4 rounded-xl shadow-md">
                             <div className="flex justify-between px-4 items-center">
-                                <span className="font-bold text-[#1e2637] text-lg">INR {Number(money ?? 0).toFixed(2)}</span>
+                                {profileLoading ? (
+                                    <span className="inline-block h-5 w-24 rounded bg-gray-200 animate-pulse" />
+                                ) : (
+                                    <span className="font-bold text-[#1e2637] text-lg">INR {Number(money ?? 0).toFixed(2)}</span>
+                                )}
                                 <div
                                     onClick={() => navigate('/transactions')}
                                     className="bg-[#BA8D63] text-white rounded-full px-3 py-1.5 text-sm cursor-pointer"

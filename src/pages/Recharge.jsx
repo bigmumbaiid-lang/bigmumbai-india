@@ -19,51 +19,34 @@ const BTN_C          = '#BA8D63';
 
 /* ── Channels ── */
 const CHANNELS = [
-    { id: 'watchpays', label: 'Watch Pay',  sub: 'Gateway',      g1: '#8b5cf6', g2: '#6d28d9' },
-    { id: 'jazpays',   label: 'Jaz Pay',    sub: 'Gateway',      g1: '#3b82f6', g2: '#1d4ed8' },
-    { id: 'bondpay',   label: 'BondPay',    sub: 'Gateway',      g1: '#fb923c', g2: '#c2410c' },
-    { id: 'trx',       label: 'TRX',        sub: 'TRON Network', g1: '#ef4444', g2: '#b91c1c' },
-    { id: 'usdt',      label: 'USDT TRC20', sub: 'Tether',       g1: '#10b981', g2: '#047857' },
+    { id: 'watchpays', label: 'WW PAY' },
+    { id: 'jazpays',   label: 'JJ PAY' },
+    { id: 'bondpay',   label: 'BB PAY' },
+    { id: 'trx',       label: 'TRX'    },
+    { id: 'usdt',      label: 'USDT TRC20' },
 ];
 
-/* ── Channel icons ── */
-const WatchSVG = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="6" width="20" height="13" rx="3" fill="white" opacity="0.9" />
-        <circle cx="12" cy="12.5" r="2.8" fill="#8b5cf6" />
-        <circle cx="12" cy="12.5" r="1.1" fill="white" />
-        <rect x="8" y="3" width="8" height="3" rx="1.5" fill="white" opacity="0.45" />
+/* ── Small inline icons — TRX / USDT only, shown after the label ── */
+// TRON's brand red, same fixed-color treatment as the Tether mark below —
+// the gem silhouette stays, it's just no longer recolored to match the button.
+const TrxSVG = ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <polygon points="12,3 22,11 12,21 2,11" fill="#EF0027" />
+        <polygon points="12,3 22,11 12,14 2,11" fill="#ff4d5e" />
     </svg>
 );
-const JazSVG = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="6" width="20" height="13" rx="3" fill="white" opacity="0.9" />
-        <rect x="2" y="10.5" width="20" height="2.5" fill="#3b82f6" opacity="0.22" />
-        <rect x="4" y="15" width="7" height="1.4" rx="0.7" fill="#3b82f6" opacity="0.55" />
-        <rect x="19" y="14" width="2.5" height="2.5" rx="0.5" fill="#3b82f6" opacity="0.75" />
+// Tether's own brand mark (green disc, white T with the signature ring
+// through the stem) — kept in its true colors rather than recoloring to match
+// the button state, same as a Visa/Mastercard mark would stay put on any button.
+const UsdtSVG = ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="#26A17B" />
+        <rect x="7.2" y="6.2" width="9.6" height="3.1" fill="#fff" />
+        <rect x="10.4" y="6.2" width="3.2" height="11.6" fill="#fff" />
+        <ellipse cx="12" cy="12.3" rx="5.6" ry="1.9" stroke="#fff" strokeWidth="1.3" fill="none" />
     </svg>
 );
-const BondSVG = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="6" width="20" height="13" rx="3" fill="white" opacity="0.9" />
-        <circle cx="12" cy="12.5" r="3.2" fill="none" stroke="#c2410c" strokeWidth="1.6" opacity="0.9" />
-        <path d="M10.4 12.6l1.1 1.1 2.1-2.3" stroke="#c2410c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
-    </svg>
-);
-const TrxSVG = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <polygon points="12,3 22,11 12,21 2,11" fill="white" opacity="0.3" />
-        <polygon points="12,3 22,11 12,14 2,11" fill="white" opacity="0.95" />
-    </svg>
-);
-const UsdtSVG = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="4" y="5" width="16" height="3.5" rx="1.75" fill="white" />
-        <rect x="10.25" y="5" width="3.5" height="11.5" rx="1.75" fill="white" />
-        <rect x="7.5" y="17.5" width="9" height="1.8" rx="0.9" fill="white" opacity="0.6" />
-    </svg>
-);
-const ICONS = { watchpays: WatchSVG, jazpays: JazSVG, bondpay: BondSVG, trx: TrxSVG, usdt: UsdtSVG };
+const ICONS = { trx: TrxSVG, usdt: UsdtSVG };
 
 /* ── Modal config ── */
 const MODAL_CFG = {
@@ -288,61 +271,36 @@ export default function Recharge() {
                                     <div className="h-[168px] w-full rounded-xl bg-gray-100 animate-pulse" />
                                 </div>
                             ) : (
-                            <div className="grid grid-cols-2 gap-0">
+                            <div className="grid grid-cols-2 gap-3 p-4">
                                 {orderedChannels.map((ch, i) => {
                                     const active    = channel === ch.id;
                                     const Icon      = ICONS[ch.id];
-                                    // A lone trailing channel is centered in its own full-width row
-                                    // (same card size as the rest) instead of leaving an empty gap.
+                                    // A lone trailing channel spans both columns but keeps
+                                    // half width, centered, instead of stretching full-width.
                                     const isLastOdd = orderedChannels.length % 2 === 1 && i === orderedChannels.length - 1;
-                                    const isRight   = !isLastOdd && i % 2 === 1;
-                                    const isBottom  = i >= 2;
                                     const card = (
                                         <button
                                             onClick={() => setChannel(ch.id)}
-                                            className={`flex flex-col items-center gap-1.5 py-3 px-3 transition-all active:scale-95 relative ${isLastOdd ? 'w-1/2' : 'w-full'}`}
-                                            style={{
-                                                background: active ? '#fdf6ee' : 'white',
-                                                borderRight: isRight ? 'none' : '1px solid #f3f3f3',
-                                            }}
+                                            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl transition-all active:scale-95"
+                                            style={{ background: active ? HDR_GRAD : '#f4f4fa' }}
                                         >
-                                            {/* Icon badge */}
-                                            <div
-                                                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                                                style={{
-                                                    background: `linear-gradient(135deg, ${ch.g1}, ${ch.g2})`,
-                                                    boxShadow: active ? `0 3px 8px ${ch.g1}55` : `0 2px 6px ${ch.g1}30`,
-                                                }}
-                                            >
-                                                <Icon />
-                                            </div>
-
-                                            <div className="text-center">
-                                                <p className="text-xs font-semibold" style={{ color: active ? BRAND_C : '#1e2637' }}>
-                                                    {ch.label}
-                                                </p>
-                                                <p style={{ fontSize: 10, color: active ? '#c4956a' : '#9ca3af' }}>
-                                                    {ch.sub}
-                                                </p>
-                                            </div>
-
-                                            {/* Active indicator dot */}
-                                            {active && (
-                                                <div
-                                                    className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
-                                                    style={{ background: BRAND_C }}
-                                                />
-                                            )}
+                                            <span className="text-sm font-semibold" style={{ color: active ? '#fff' : '#6b7280' }}>
+                                                {ch.label}
+                                            </span>
+                                            {Icon && <Icon size={14} color={active ? '#fff' : '#9ca3af'} />}
                                         </button>
                                     );
                                     return isLastOdd ? (
-                                        <div key={ch.id} className="col-span-2 flex justify-start" style={{ borderTop: '1px solid #f3f3f3' }}>
+                                        // Nested grid with the same columns/gap as the parent, so this
+                                        // button's width is pixel-identical to a real column above it —
+                                        // `w-1/2` of a col-span-2 flex box would measure half of
+                                        // (column + gap + column), which is wider than one real column.
+                                        <div key={ch.id} className="col-span-2 grid grid-cols-2 gap-3">
                                             {card}
+                                            <div />
                                         </div>
                                     ) : (
-                                        <div key={ch.id} style={{ borderTop: isBottom ? '1px solid #f3f3f3' : 'none' }}>
-                                            {card}
-                                        </div>
+                                        <div key={ch.id}>{card}</div>
                                     );
                                 })}
                             </div>

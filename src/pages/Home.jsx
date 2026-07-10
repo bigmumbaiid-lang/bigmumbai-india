@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import BannerSlider from '../components/BannerSlider'
@@ -6,8 +6,7 @@ import WinningCarousel from '../components/WinningCarousel'
 import bigMumbaiLogo from '../assets/bigMumbaiLogo.png'
 import minesIcon from '../assets/minesIcon.jpg'
 import blackJackIcon from '../assets/blackJackIcon.jpg'
-import { Lock, Play, X, BellRing, Mail } from 'lucide-react'
-import axiosInstance from '../utils/axios'
+import { Lock, Play, Mail } from 'lucide-react'
 import LotteryIcon from '../assets/lotteryIcons/Lottery.0a2eff85.png'
 import WinGoIcon from '../assets/lotteryIcons/5D-WinGO.c1620dae.png'
 import CasinoIcon from '../assets/lotteryIcons/AG-Casino.78de020a.png'
@@ -16,87 +15,6 @@ import SportsIcon from '../assets/lotteryIcons/3D-Sports.88f7af0e.png'
 import PVCIcon from '../assets/lotteryIcons/PVC.128af64d.png'
 import FishingIcon from '../assets/lotteryIcons/Fishing.3e646af6.png'
 import PopularIcon from '../assets/lotteryIcons/Popular.92462f10.png'
-
-// Parse text and turn URLs into clickable links
-const URL_RE = /(https?:\/\/[^\s]+)/g
-function renderContent(text) {
-    if (!text) return null
-    return text.split(URL_RE).map((part, i) =>
-        URL_RE.test(part) ? (
-            <a key={i} href={part} target="_blank" rel="noopener noreferrer"
-                className="font-medium underline underline-offset-2 break-all"
-                style={{ color: '#b1835a' }}
-                onClick={e => e.stopPropagation()}>
-                {part}
-            </a>
-        ) : <span key={i}>{part}</span>
-    )
-}
-
-function PersonalMessageModal({ message, onMarkRead, onLater, isGlobal }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-8"
-            style={{ background: 'rgba(0,0,0,0.5)' }}>
-            <div className="w-full rounded-3xl overflow-hidden"
-                style={{
-                    maxWidth: 355,
-                    background: '#fff',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.16), 0 4px 14px rgba(177,131,90,0.10)',
-                }}>
-
-                {/* Top accent bar */}
-                <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg,#e2b97a,#b1835a)' }} />
-
-                {/* Header */}
-                <div className="relative px-4 pt-5 pb-3 flex items-center gap-3">
-                    <div className="shrink-0 h-9 w-9 rounded-xl flex items-center justify-center"
-                        style={{ background: 'linear-gradient(135deg,#fdf0e2,#f7dfc0)' }}>
-                        <BellRing size={16} style={{ color: '#c49055' }} />
-                    </div>
-                    <h3 className="flex-1 text-[14px] font-bold text-gray-800 leading-snug pr-5">
-                        {message.title}
-                    </h3>
-                    <button onClick={onLater}
-                        className="absolute top-3.5 right-3.5 h-6 w-6 rounded-full flex items-center justify-center"
-                        style={{ background: '#f3f4f6' }}>
-                        <X size={12} className="text-gray-400" />
-                    </button>
-                </div>
-
-                {/* Divider */}
-                <div className="mx-4 h-px" style={{ background: '#f3f3f3' }} />
-
-                {/* Body */}
-                <div className="px-4 py-5">
-                    <p className="text-[12.5px] text-gray-500 leading-relaxed whitespace-pre-wrap break-words">
-                        {renderContent(message.content)}
-                    </p>
-                    {message.imageUrl && (
-                        <img src={message.imageUrl} alt=""
-                            className="mt-3 rounded-xl w-full object-cover" style={{ maxHeight: 160 }} />
-                    )}
-                </div>
-
-                {/* Footer */}
-                <div className="px-4 pb-5 flex gap-2">
-                    <button onClick={onLater}
-                        className="flex-1 py-2 rounded-xl text-[12.5px] font-semibold transition-colors"
-                        style={{ background: '#f5f5f5', color: '#aaa' }}>
-                        Later
-                    </button>
-                    <button onClick={onMarkRead}
-                        className="flex-1 py-2 rounded-xl text-[12.5px] font-semibold text-white transition-all"
-                        style={{
-                            background: 'linear-gradient(135deg,#e2b97a,#b1835a)',
-                            boxShadow: '0 3px 10px rgba(177,131,90,0.30)',
-                        }}>
-                        {isGlobal ? 'Got it' : 'Mark as Read'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
 
 const gameCategories = [
     { icon: LotteryIcon, label: 'Lottery' },
@@ -168,79 +86,10 @@ function MinesCardIcon() {
     )
 }
 
-const DISMISSED_KEY = 'dismissed_global_announcements'
-
-function getDismissed() {
-    try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]') } catch { return [] }
-}
-
-function addDismissed(id) {
-    try {
-        const dismissed = getDismissed()
-        if (!dismissed.includes(id)) {
-            localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed, id]))
-        }
-    } catch {}
-}
-
 function Home() {
     const navigate = useNavigate()
-    const [msgQueue, setMsgQueue] = useState([])
-    const [msgIdx, setMsgIdx]     = useState(0)
-
-    useEffect(() => {
-        const fetchAll = async () => {
-            try {
-                const [personalRes, globalRes] = await Promise.all([
-                    axiosInstance.get('/announcements/unread-personal'),
-                    axiosInstance.get('/announcements/user'),
-                ])
-                const personal = personalRes.data?.data || []
-                const all      = globalRes.data?.data || []
-                const dismissed = getDismissed()
-                const unseenGlobal = all
-                    .filter(a => a.type === 'global' && !dismissed.includes(a._id))
-                    .map(a => ({ ...a, _isGlobal: true }))
-                setMsgQueue([...unseenGlobal, ...personal])
-            } catch {}
-        }
-        fetchAll()
-    }, [])
-
-    const currentMsg = msgQueue[msgIdx] ?? null
-
-    const handleMarkRead = async () => {
-        if (currentMsg._isGlobal) {
-            addDismissed(currentMsg._id)
-        } else {
-            try { await axiosInstance.patch(`/announcements/${currentMsg._id}/read`) } catch {}
-        }
-        advance()
-    }
-
-    const handleLater = () => {
-        if (currentMsg?._isGlobal) addDismissed(currentMsg._id)
-        advance()
-    }
-
-    const advance = () => {
-        if (msgIdx + 1 < msgQueue.length) {
-            setMsgIdx(i => i + 1)
-        } else {
-            setMsgQueue([])
-        }
-    }
 
     return (
-        <>
-        {currentMsg && (
-            <PersonalMessageModal
-                message={currentMsg}
-                onMarkRead={handleMarkRead}
-                onLater={handleLater}
-                isGlobal={!!currentMsg._isGlobal}
-            />
-        )}
         <div
             className="flex items-center justify-center min-h-screen"
             style={{ minHeight: '100dvh' }}
@@ -407,7 +256,6 @@ function Home() {
                 />
             </div>
         </div>
-        </>
     )
 }
 
