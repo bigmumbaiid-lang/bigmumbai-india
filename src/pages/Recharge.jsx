@@ -263,12 +263,17 @@ export default function Recharge() {
                             <div className="w-[90%] mx-auto border-b border-gray-100" />
 
                             {pageLoad ? (
-                                // How many channels end up visible depends on config we
-                                // haven't fetched yet, so this doesn't try to mimic
-                                // individual cards — just a generic loading block sized
-                                // to roughly where the grid will land.
-                                <div className="p-4">
-                                    <div className="h-[168px] w-full rounded-xl bg-gray-100 animate-pulse" />
+                                // Mirrors the common 5-channel layout (2x2 grid + one
+                                // trailing half-width card) so the skeleton doesn't jump
+                                // around once the real channels land.
+                                <div className="grid grid-cols-2 gap-3 p-4">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="h-[52px] rounded-xl bg-gray-100 animate-pulse" />
+                                    ))}
+                                    <div className="col-span-2 grid grid-cols-2 gap-3">
+                                        <div className="h-[52px] rounded-xl bg-gray-100 animate-pulse" />
+                                        <div />
+                                    </div>
                                 </div>
                             ) : (
                             <div className="grid grid-cols-2 gap-3 p-4">
