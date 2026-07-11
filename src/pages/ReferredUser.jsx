@@ -133,6 +133,7 @@ function ReferredUser() {
                                     <div className="text-center text-xs text-gray-500">
                                         {user.createdAt
                                             ? new Date(user.createdAt).toLocaleDateString('en-IN', {
+                                                timeZone: 'Asia/Kolkata',
                                                 day: '2-digit',
                                                 month: 'short',
                                                 year: '2-digit',

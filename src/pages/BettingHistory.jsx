@@ -5,6 +5,7 @@ import axios from '../utils/axios'
 import { toDisplay } from '../utils/money'
 import blackJackIcon from '../assets/blackJackIcon.jpg'
 import minesIcon from '../assets/minesIcon.jpg'
+import DateRangePicker from '../components/DateRangePicker'
 
 const GAMES = [
     { key: 'mines',     label: 'Mines',     endpoint: '/mines/history',     icon: minesIcon },
@@ -23,7 +24,21 @@ const DATE_FILTERS = [
     { key: 'custom', label: 'Custom' },
 ]
 
-const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x }
+// IST = UTC+5:30. "Today"/"This Week"/"This Month" must be calendar boundaries
+// in IST regardless of the device's own timezone — using the browser's local
+// setHours(0,0,0,0) here would drift by the device/IST offset (e.g. a device
+// set to UTC would put "midnight" 5.5h before real IST midnight, leaking the
+// previous IST calendar day's late-night bets into "Today").
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+
+// "Now" shifted so its UTC-getters read as IST wall-clock values.
+const istShifted = (d) => new Date(d.getTime() + IST_OFFSET_MS)
+
+// Real UTC instant of IST midnight for an already-IST-shifted Date.
+const istMidnightOf = (shifted) => {
+    const asIfUTC = new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()))
+    return new Date(asIfUTC.getTime() - IST_OFFSET_MS)
+}
 
 const compact = (val) => {
     const n = Math.abs(Number(val || 0))
@@ -52,6 +67,7 @@ function BettingHistory() {
 
     const sentinelRef = useRef(null)
     const loadingRef  = useRef(false)
+    const requestIdRef = useRef(0)
 
     const game = GAMES.find((g) => g.key === activeGame)
 
@@ -71,39 +87,65 @@ function BettingHistory() {
     }
 
     const getRange = useCallback(() => {
-        const now = new Date()
-        if (dateFilter === 'today') return { from: startOfDay(now).toISOString(), to: now.toISOString() }
-        if (dateFilter === 'week') {
-            const s = startOfDay(now); s.setDate(s.getDate() - ((s.getDay() + 6) % 7))
-            return { from: s.toISOString(), to: now.toISOString() }
+        const now     = new Date()
+        const shifted = istShifted(now)
+
+        if (dateFilter === 'today') {
+            return { from: istMidnightOf(shifted).toISOString(), to: now.toISOString() }
         }
-        if (dateFilter === 'month')
-            return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), to: now.toISOString() }
+        if (dateFilter === 'week') {
+            // Monday-start week, based on the IST calendar day (getUTCDay() on the
+            // shifted date reads as IST's day-of-week since it's shifted to IST wall-clock).
+            const dow           = (shifted.getUTCDay() + 6) % 7
+            const shiftedMonday = new Date(shifted.getTime() - dow * 86400000)
+            return { from: istMidnightOf(shiftedMonday).toISOString(), to: now.toISOString() }
+        }
+        if (dateFilter === 'month') {
+            const shiftedFirst = new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), 1))
+            return { from: new Date(shiftedFirst.getTime() - IST_OFFSET_MS).toISOString(), to: now.toISOString() }
+        }
         if (dateFilter === 'custom') {
+            // customFrom/customTo are YYYY-MM-DD strings meant as IST calendar days —
+            // parse as UTC first so the local-timezone Date constructor can't shift them.
             const out = {}
-            if (customFrom) out.from = new Date(customFrom + 'T00:00:00').toISOString()
-            if (customTo)   out.to   = new Date(customTo   + 'T23:59:59.999').toISOString()
+            if (customFrom) out.from = istMidnightOf(new Date(customFrom + 'T00:00:00Z')).toISOString()
+            if (customTo) {
+                const nextDay = istMidnightOf(new Date(customTo + 'T00:00:00Z'))
+                out.to = new Date(nextDay.getTime() + 86400000 - 1).toISOString()
+            }
             return out
         }
         return {}
     }, [dateFilter, customFrom, customTo])
 
     const fetchPage = useCallback(async (pageToLoad, replace = false) => {
-        if (loadingRef.current) return
+        // "Load more" calls still dedupe against an in-flight request, but a filter
+        // change (replace=true) must always be allowed to start immediately —
+        // otherwise it silently no-ops while a stale request is in flight (see
+        // requestId below) and the list never actually refreshes for the new filter.
+        if (!replace && loadingRef.current) return
+        const requestId = ++requestIdRef.current
         loadingRef.current = true
         setLoading(true); setError('')
         try {
             const { data } = await axios.get(game.endpoint, {
                 params: { page: pageToLoad, limit: PAGE_SIZE, ...getRange(), result: outcome !== 'all' ? outcome : undefined },
             })
+            // A newer request (e.g. the user switched filters again) has since
+            // superseded this one — discard these now-stale results instead of
+            // merging them into the list.
+            if (requestIdRef.current !== requestId) return
             const results = data.results || []
             setItems((prev) => (replace ? results : [...prev, ...results]))
             setHasMore(Boolean(data.hasMore))
             setPage(pageToLoad)
             if (data.summary) setServerSummary(data.summary)
         } catch (err) {
+            if (requestIdRef.current !== requestId) return
             setError(err.response?.data?.message || err.response?.data?.error || 'Failed to load history')
-        } finally { setLoading(false); loadingRef.current = false }
+        } finally {
+            if (requestIdRef.current === requestId) { setLoading(false); loadingRef.current = false }
+        }
     }, [game.endpoint, getRange, outcome])
 
     useEffect(() => {
@@ -345,16 +387,15 @@ function BettingHistory() {
                         </div>
                     </div>
 
-                    {/* Custom date inputs */}
+                    {/* Custom date range */}
                     {dateFilter === 'custom' && (
-                        <div className="flex items-center gap-2 px-4 pb-3">
-                            <input type="date" value={customFrom} max={customTo || undefined}
-                                onChange={e => setCustomFrom(e.target.value)}
-                                className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 outline-none focus:border-[#b1835a]" />
-                            <span className="text-gray-300 text-xs">→</span>
-                            <input type="date" value={customTo} min={customFrom || undefined}
-                                onChange={e => setCustomTo(e.target.value)}
-                                className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 outline-none focus:border-[#b1835a]" />
+                        <div className="flex items-center px-4 pt-3 pb-3">
+                            <DateRangePicker
+                                from={customFrom}
+                                to={customTo}
+                                onChange={(f, t) => { setCustomFrom(f); setCustomTo(t) }}
+                                placeholder="Select date range"
+                            />
                         </div>
                     )}
                 </div>

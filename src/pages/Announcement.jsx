@@ -23,7 +23,7 @@ function fmtDate(raw) {
     if (!raw) return '';
     const d = new Date(raw);
     if (isNaN(d)) return raw;
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function EmptyState({ message, isAlert }) {

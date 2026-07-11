@@ -218,6 +218,7 @@ function GiftClaim() {
         if (!value) return '';
         return new Date(value)
             .toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',

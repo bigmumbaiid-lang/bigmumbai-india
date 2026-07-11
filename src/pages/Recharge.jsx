@@ -312,6 +312,23 @@ export default function Recharge() {
                             <div className="px-4 pt-4 pb-4">
                                 <p className="text-xs font-medium text-gray-400 mb-3">Recharge Amount (INR)</p>
 
+                                {pageLoad ? (
+                                    // Quick amounts depend on the deposit config we haven't
+                                    // fetched yet, so mirror the real layout's shape (input
+                                    // row + 8-pill grid + footer line) with pulse blocks.
+                                    <>
+                                        <div className="flex items-center gap-1 pb-2 mb-4" style={{ borderBottom: '1.5px solid #e5e7eb' }}>
+                                            <div className="h-7 w-24 rounded-md bg-gray-100 animate-pulse" />
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-2 mb-3">
+                                            {Array.from({ length: 8 }).map((_, i) => (
+                                                <div key={i} className="h-9 rounded-lg bg-gray-100 animate-pulse" />
+                                            ))}
+                                        </div>
+                                        <div className="h-3 w-28 rounded bg-gray-100 animate-pulse" />
+                                    </>
+                                ) : (
+                                <>
                                 {/* Amount input */}
                                 <div className="flex items-center gap-1 pb-2 mb-4" style={{ borderBottom: `1.5px solid ${(tooLow || tooHigh) ? '#ef4444' : amount > 0 ? BRAND_C : '#e5e7eb'}` }}>
                                     <span className="text-2xl font-semibold" style={{ color: (tooLow || tooHigh) ? '#ef4444' : amount > 0 ? BRAND_C : '#d1d5db' }}>₹</span>
@@ -368,6 +385,8 @@ export default function Recharge() {
                                     {tooLow  && <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Amount too low</span>}
                                     {tooHigh && <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Max ₹{maxAmt}</span>}
                                 </div>
+                                </>
+                                )}
                             </div>
 
                         </div>
