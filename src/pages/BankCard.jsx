@@ -11,8 +11,8 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #e2b97a 0%, #b1835a 100%)';
 
 const SkeletonInput = () => (
     <div className="space-y-1">
-        <div className="h-2.5 w-16 bg-gray-100 animate-pulse rounded-full" />
-        <div className="h-11 w-full bg-gray-100 animate-pulse rounded-2xl" />
+        <div className="h-2.5 w-16 bg-gray-100 animate-pulse" />
+        <div className="h-11 w-full bg-gray-100 animate-pulse" />
     </div>
 );
 
@@ -29,8 +29,8 @@ function InputRow({ icon: Icon, error, disabled, verified, children }) {
     }[state];
 
     return (
-        <div className={`flex items-center gap-2.5 rounded-2xl border px-3 h-11 transition-all duration-150 ${STYLES.wrap}`}>
-            <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-150 ${STYLES.chip}`}>
+        <div className={`flex items-center gap-2.5 border px-3 h-11 transition-all duration-150 ${STYLES.wrap}`}>
+            <div className={`w-7 h-7 flex items-center justify-center shrink-0 transition-colors duration-150 ${STYLES.chip}`}>
                 <Icon size={15} color={STYLES.iconColor} />
             </div>
             {children}
@@ -201,7 +201,7 @@ function BankCard() {
                 >
                     {!pageLoading && loadError ? (
                         <div className="flex flex-col items-center justify-center text-center px-4 py-16">
-                            <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
+                            <div className="w-14 h-14 flex items-center justify-center mb-4"
                                 style={{ background: '#fff7ed', border: '2px solid #fed7aa' }}>
                                 <AlertTriangle size={24} color="#f97316" />
                             </div>
@@ -211,7 +211,7 @@ function BankCard() {
                             </p>
                             <button
                                 onClick={fetchBankCard}
-                                className="mt-5 px-6 py-2.5 rounded-xl text-white text-[13px] font-semibold transition-all active:scale-[0.98]"
+                                className="mt-5 px-6 py-2.5 text-white text-[13px] font-semibold transition-all active:scale-[0.98]"
                                 style={{ background: BRAND_GRADIENT }}
                             >
                                 Retry
@@ -221,20 +221,20 @@ function BankCard() {
                         <>
                             {/* Bank card */}
                             {pageLoading ? (
-                                <div className="h-[176px] w-full bg-gray-100 animate-pulse rounded-3xl" />
+                                <div className="h-[176px] w-full bg-gray-100 animate-pulse" />
                             ) : (
                                 <div
-                                    className="rounded-3xl p-5 text-white relative overflow-hidden"
+                                    className="p-5 text-white relative overflow-hidden"
                                     style={{ background: BRAND_GRADIENT, minHeight: 176, boxShadow: '0 16px 32px -12px rgba(177,131,90,0.45)' }}
                                 >
-                                    {/* Soft decorative circles — plain, no blend modes */}
-                                    <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10 pointer-events-none" />
-                                    <div className="absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-black/10 pointer-events-none" />
+                                    {/* Soft decorative squares — plain, no blend modes */}
+                                    <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 pointer-events-none" />
+                                    <div className="absolute -bottom-12 -left-8 w-32 h-32 bg-black/10 pointer-events-none" />
 
                                     {/* Top row: bank icon + name, status pill */}
                                     <div className="relative flex items-center justify-between gap-3 mb-6">
                                         <div className="flex items-center gap-2.5 min-w-0">
-                                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+                                            <div className="w-10 h-10 bg-white/20 flex items-center justify-center shrink-0">
                                                 <Landmark size={18} />
                                             </div>
                                             <p className="font-bold text-[15px] leading-tight truncate" title={formData.bankName || 'Your Bank'}>
@@ -243,7 +243,7 @@ function BankCard() {
                                         </div>
                                         {isExisting && (
                                             <span
-                                                className="shrink-0 text-[9.5px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                                                className="shrink-0 text-[9.5px] font-bold uppercase tracking-wide px-2.5 py-1"
                                                 style={cardVerified
                                                     ? { background: 'rgba(74,222,128,0.25)', color: '#f0fdf4' }
                                                     : { background: 'rgba(251,191,36,0.25)', color: '#fffbeb' }
@@ -282,9 +282,9 @@ function BankCard() {
                             {/* Verification banner */}
                             {!pageLoading && isExisting && (
                                 cardVerified ? (
-                                    <div className="rounded-xl px-3.5 py-2.5 flex items-center gap-2.5"
+                                    <div className="px-3.5 py-2.5 flex items-center gap-2.5"
                                         style={{ background: '#f0fdf6', border: '1px solid #bbf7d0' }}>
-                                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                                        <div className="w-6 h-6 flex items-center justify-center shrink-0"
                                             style={{ background: 'linear-gradient(135deg,#4ade80,#16a34a)' }}>
                                             <Check size={13} className="text-white" />
                                         </div>
@@ -294,7 +294,7 @@ function BankCard() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="rounded-xl px-3.5 py-2.5 flex items-center gap-2.5"
+                                    <div className="px-3.5 py-2.5 flex items-center gap-2.5"
                                         style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
                                         <ShieldCheck size={16} className="text-blue-400 shrink-0" />
                                         <p className="text-blue-700 text-[10px] leading-relaxed">
@@ -305,7 +305,7 @@ function BankCard() {
                             )}
 
                             {/* Unified form card */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 space-y-3">
+                            <div className="bg-white border border-gray-100 shadow-sm px-4 py-3 space-y-3">
 
                                 {pageLoading ? (
                                     <><SkeletonInput /><SkeletonInput /><SkeletonInput /><SkeletonInput /></>
@@ -457,7 +457,7 @@ function BankCard() {
                             type="button"
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full py-3.5 rounded-2xl text-white text-[13.5px] font-bold transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
+                            className="w-full py-3.5 text-white text-[13.5px] font-bold transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
                             style={{ background: BRAND_GRADIENT, boxShadow: '0 10px 24px rgba(177,131,90,0.32)' }}
                         >
                             {loading ? (
@@ -477,8 +477,8 @@ function BankCard() {
                 {showSuccess && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center px-8">
                         <div className="absolute inset-0 bg-black/25 animate-fadeIn" />
-                        <div className="relative bg-white rounded-3xl shadow-2xl px-8 py-8 flex flex-col items-center animate-popIn w-full max-w-[290px]">
-                            <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
+                        <div className="relative bg-white shadow-2xl px-8 py-8 flex flex-col items-center animate-popIn w-full max-w-[290px]">
+                            <div className="w-14 h-14 flex items-center justify-center mb-4"
                                 style={{ background: BRAND_GRADIENT }}>
                                 <Check size={26} className="text-white" strokeWidth={3} />
                             </div>
@@ -494,8 +494,8 @@ function BankCard() {
                 {errorMsg && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center px-8">
                         <div className="absolute inset-0 bg-black/25 animate-fadeIn" onClick={() => setErrorMsg('')} />
-                        <div className="relative bg-white rounded-3xl shadow-2xl px-7 py-7 flex flex-col items-center animate-popIn w-full max-w-[290px]">
-                            <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center mb-4"
+                        <div className="relative bg-white shadow-2xl px-7 py-7 flex flex-col items-center animate-popIn w-full max-w-[290px]">
+                            <div className="w-[52px] h-[52px] flex items-center justify-center mb-4"
                                 style={{ background: '#fff7ed', border: '2px solid #fed7aa' }}>
                                 <AlertTriangle size={22} color="#f97316" />
                             </div>
@@ -503,7 +503,7 @@ function BankCard() {
                             <p className="text-gray-500 text-[11.5px] mt-2 text-center leading-relaxed px-1">{errorMsg}</p>
                             <button
                                 onClick={() => setErrorMsg('')}
-                                className="mt-5 w-full py-2.5 rounded-xl text-white text-[13px] font-semibold transition-all active:scale-[0.98]"
+                                className="mt-5 w-full py-2.5 text-white text-[13px] font-semibold transition-all active:scale-[0.98]"
                                 style={{ background: BRAND_GRADIENT }}
                             >
                                 Got it

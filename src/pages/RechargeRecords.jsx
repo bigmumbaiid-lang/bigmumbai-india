@@ -6,17 +6,20 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import BackButton from '../components/BackButton'
 
-const TrxSVG = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <polygon points="12,3 22,11 12,21 2,11" fill="white" opacity="0.3" />
-        <polygon points="12,3 22,11 12,14 2,11" fill="white" opacity="0.95" />
+// Same fixed-brand-color marks as the Recharge page's channel selector — not
+// recolored to match surrounding text, like a Visa/Mastercard mark would stay put.
+const TrxSVG = ({ size = 13 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <polygon points="12,3 22,11 12,21 2,11" fill="#EF0027" />
+        <polygon points="12,3 22,11 12,14 2,11" fill="#ff4d5e" />
     </svg>
 );
-const UsdtSVG = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <rect x="4" y="5" width="16" height="3.5" rx="1.75" fill="white" />
-        <rect x="10.25" y="5" width="3.5" height="11.5" rx="1.75" fill="white" />
-        <rect x="7.5" y="17.5" width="9" height="1.8" rx="0.9" fill="white" opacity="0.6" />
+const UsdtSVG = ({ size = 13 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="#26A17B" />
+        <rect x="7.2" y="6.2" width="9.6" height="3.1" fill="#fff" />
+        <rect x="10.4" y="6.2" width="3.2" height="11.6" fill="#fff" />
+        <ellipse cx="12" cy="12.3" rx="5.6" ry="1.9" stroke="#fff" strokeWidth="1.3" fill="none" />
     </svg>
 );
 
@@ -145,8 +148,10 @@ function RechargeRecords() {
                                 >
                                     <div className='flex justify-between py-3 px-5'>
                                         <div className='flex flex-col gap-1'>
-                                            <span className={isExpired ? 'text-gray-400 font-medium' : 'text-gray-800 font-medium'}>
+                                            <span className={`flex items-center gap-1.5 ${isExpired ? 'text-gray-400 font-medium' : 'text-gray-800 font-medium'}`}>
                                                 {label}
+                                                {isUsdt && <UsdtSVG />}
+                                                {isTrx && <TrxSVG />}
                                             </span>
                                             <p className='text-sm text-[#aaa]'>
                                                 {new Date(item.createdAt)
@@ -154,23 +159,9 @@ function RechargeRecords() {
                                                     .replace(",", "")}
                                             </p>
                                         </div>
-                                        <div className='flex flex-col items-end gap-1'>
-                                            <span className={isExpired ? 'text-gray-400' : 'text-[#03a112]'}>
-                                                +{Number(item.amount || 0).toFixed(2)}
-                                            </span>
-                                            {isUsdt && (
-                                                <div
-                                                    className='flex items-center justify-center w-[20px] h-[20px] rounded-full flex-shrink-0'
-                                                    style={{ background: 'linear-gradient(135deg,#10b981,#047857)' }}
-                                                ><UsdtSVG /></div>
-                                            )}
-                                            {isTrx && (
-                                                <div
-                                                    className='flex items-center justify-center w-[20px] h-[20px] rounded-full flex-shrink-0'
-                                                    style={{ background: 'linear-gradient(135deg,#ef4444,#b91c1c)' }}
-                                                ><TrxSVG /></div>
-                                            )}
-                                        </div>
+                                        <span className={isExpired ? 'text-gray-400' : 'text-[#03a112]'}>
+                                            +{Number(item.amount || 0).toFixed(2)}
+                                        </span>
                                     </div>
                                     <div className="w-[90%] mx-auto border-b border-gray-100"></div>
                                 </div>

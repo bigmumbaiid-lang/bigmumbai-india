@@ -7,6 +7,24 @@ import { useNavigate } from 'react-router-dom';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 
+// Small channel marks — same fixed-brand-color treatment as the Recharge page's
+// channel selector (not recolored to match surrounding text, like a Visa/Mastercard mark).
+const TrxSVG = ({ size = 13 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <polygon points="12,3 22,11 12,21 2,11" fill="#EF0027" />
+        <polygon points="12,3 22,11 12,14 2,11" fill="#ff4d5e" />
+    </svg>
+);
+const UsdtSVG = ({ size = 13 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="#26A17B" />
+        <rect x="7.2" y="6.2" width="9.6" height="3.1" fill="#fff" />
+        <rect x="10.4" y="6.2" width="3.2" height="11.6" fill="#fff" />
+        <ellipse cx="12" cy="12.3" rx="5.6" ry="1.9" stroke="#fff" strokeWidth="1.3" fill="none" />
+    </svg>
+);
+const CHANNEL_ICONS = { trx: TrxSVG, usdt: UsdtSVG };
+
 // Filter options — value is sent to the API as ?type=, 'all' omits the param
 const FILTERS = [
     { value: 'all', label: 'All transactions' },
@@ -95,7 +113,12 @@ function Transaction() {
     const getTransactionDisplay = (item) => {
         const amt = Number(item.amount || 0);
         if (item.type === 'payment') {
-            return { title: item.title || 'Recharge', amount: `+${amt.toFixed(2)}`, amountColor: 'text-[#03a112]' };
+            return {
+                title: item.title || 'Recharge',
+                icon: CHANNEL_ICONS[item.channel] || null,
+                amount: `+${amt.toFixed(2)}`,
+                amountColor: 'text-[#03a112]',
+            };
         }
         else if (item.type === 'withdrawal') {
             return { title: 'Withdrawal', amount: `-${Math.abs(amt).toFixed(2)}`, amountColor: 'text-red-500' };
@@ -234,11 +257,12 @@ function Transaction() {
                                 <div key={item._id ?? index} ref={isLast ? lastElementRef : null}>
                                     <div className="flex justify-between py-3 px-5">
                                         <div className="flex flex-col gap-1">
-                                            <span className={`font-medium ${display.titleColor || (display.amountColor.includes('red') ? 'text-red-500' : 'text-gray-800')}`}>
+                                            <span className={`font-medium flex items-center gap-1.5 ${display.titleColor || (display.amountColor.includes('red') ? 'text-red-500' : 'text-gray-800')}`}>
                                                 {display.title}
+                                                {display.icon && <display.icon />}
                                             </span>
                                             <p className="text-sm text-[#aaa]">
-                                                {new Date(item.type === 'payment' && item.successAt ? item.successAt : item.date)
+                                                {new Date(item.successAt || item.date)
                                                     .toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" })
                                                     .replace(",", "")}
                                             </p>

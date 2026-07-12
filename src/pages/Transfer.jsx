@@ -6,7 +6,7 @@ import axios from '../utils/axios';
 import { AuthContext } from '../context/AuthContext';
 
 const BRAND = 'linear-gradient(90deg, rgb(217,173,130), rgb(177,131,90))';
-const QUICK = [100, 500, 1000, 5000];
+const QUICK = [1000, 1088, 2088, 5000,7000,10000,14000,15000,20000,28000,30000,42000];
 
 const SHELL = 'flex items-center justify-center min-h-screen';
 const INNER = 'w-full lg:max-w-[400px] mx-auto h-screen flex flex-col overflow-hidden shadow-2xl border border-gray-300';
@@ -78,9 +78,64 @@ function Transfer() {
 
     if (loadingInfo) {
         return (
-            <div className={SHELL}>
-                <div className={INNER + ' items-center justify-center'}>
-                    <div className="w-8 h-8 border-2 border-[#b1835a]/30 border-t-[#b1835a] rounded-full animate-spin" />
+            <div className={SHELL} style={{ minHeight: '100dvh' }}>
+                <div className={INNER} style={{ height: '100dvh' }}>
+
+                    {/* Header */}
+                    <div className="p-4 text-white flex items-center justify-between flex-shrink-0 z-10" style={{ background: BRAND }}>
+                        <div className="cursor-pointer flex items-center gap-2" onClick={() => navigate(-1)}>
+                            <ArrowBackIosIcon fontSize="small" />
+                            <span className="text-sm">Transfer</span>
+                        </div>
+                        <div className="text-sm text-white/90">Records</div>
+                    </div>
+
+                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 space-y-4" style={{ background: '#f7f8ff' }}>
+
+                        {/* Balance card skeleton */}
+                        <div
+                            className="relative overflow-hidden rounded-3xl p-5 text-white shadow-xl"
+                            style={{ background: 'linear-gradient(135deg, #d9ad82 0%, #8f5c34 100%)' }}
+                        >
+                            <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10" />
+                            <div className="absolute -right-2 bottom-0 w-20 h-20 rounded-full bg-white/5" />
+                            <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.15em] mb-2 relative">Available Balance</p>
+                            <div className="h-7 w-40 rounded-lg bg-white/20 animate-pulse relative" />
+                            <div className="mt-4 grid grid-cols-2 gap-3 relative">
+                                <div className="bg-white/10 backdrop-blur rounded-2xl px-3 py-2.5 border border-white/10">
+                                    <p className="text-white/50 text-[10px] font-medium mb-1.5">Transfer Attempts</p>
+                                    <div className="h-5 w-8 rounded bg-white/20 animate-pulse" />
+                                </div>
+                                <div className="bg-white/10 backdrop-blur rounded-2xl px-3 py-2.5 border border-white/10">
+                                    <p className="text-white/50 text-[10px] font-medium mb-1.5">Transfer Quota</p>
+                                    <div className="h-5 w-20 rounded bg-white/20 animate-pulse" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Form skeleton */}
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.12em] mb-2 px-1">To Account</p>
+                                <div className="h-[52px] rounded-2xl bg-white shadow-sm border border-gray-100" />
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.12em] mb-2 px-1">Amount</p>
+                                <div className="h-[52px] rounded-2xl bg-white shadow-sm border border-gray-100 mb-2.5" />
+                                <div className="grid grid-cols-4 gap-2">
+                                    {QUICK.map(v => (
+                                        <div key={v} className="h-9 rounded-xl bg-gray-100 animate-pulse" />
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.12em] mb-2 px-1">Payment Password</p>
+                                <div className="h-[52px] rounded-2xl bg-white shadow-sm border border-gray-100" />
+                            </div>
+                            <div className="w-full h-[52px] rounded-2xl bg-gray-100 animate-pulse mt-1" />
+                        </div>
+
+                    </div>
                 </div>
             </div>
         );
@@ -240,7 +295,7 @@ function Transfer() {
                                             className={`py-2.5 rounded-xl text-xs font-bold transition-all ${active ? 'text-white shadow-md shadow-[#b1835a]/30' : 'bg-white border border-gray-100 text-gray-500 shadow-sm hover:border-[#c9956a] hover:text-[#b1835a]'}`}
                                             style={active ? { background: 'linear-gradient(135deg,#d9ad82,#b1835a)' } : {}}
                                         >
-                                            {v >= 1000 ? `${v / 1000}K` : v}
+                                            {v.toLocaleString('en-US')}
                                         </button>
                                     );
                                 })}

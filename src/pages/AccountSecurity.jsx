@@ -52,8 +52,9 @@ function AccountSecurity() {
                 <div className="flex-1 min-h-0 bg-white overflow-y-auto">
                     {loading ? (
                         <div className="divide-y divide-gray-100">
-                            {/* Skeleton rows while checking */}
-                            {[...Array(2)].map((_, i) => (
+                            {/* Skeleton row while checking — only "Modify login password"
+                                is guaranteed, so don't speculate about the payment-password row */}
+                            {[...Array(1)].map((_, i) => (
                                 <div key={i} className="flex items-center justify-between px-5 py-4 animate-pulse">
                                     <div className="h-4 bg-gray-100 rounded w-40" />
                                     <div className="h-4 bg-gray-100 rounded w-3" />
