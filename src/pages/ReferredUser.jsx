@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from '../utils/axios';
 import toast, { Toaster } from 'react-hot-toast';
 import SearchIcon from '@mui/icons-material/Search';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import BackButton from '../components/BackButton';
 
 function ReferredUser() {
@@ -115,7 +117,13 @@ function ReferredUser() {
                         </div>
                     ) : referredUsers.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                            <span className="text-3xl mb-2">👥</span>
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#fff6ea] text-[#c9975f] mb-3">
+                                {debouncedSearch ? (
+                                    <SearchOffRoundedIcon sx={{ fontSize: 34 }} />
+                                ) : (
+                                    <GroupsRoundedIcon sx={{ fontSize: 34 }} />
+                                )}
+                            </div>
                             <p className="text-sm">
                                 {debouncedSearch ? 'No users match your search' : 'No referred users yet'}
                             </p>
@@ -130,15 +138,30 @@ function ReferredUser() {
                                     <div className="font-medium text-gray-800 text-sm truncate pr-2">
                                         {user.username}
                                     </div>
-                                    <div className="text-center text-xs text-gray-500">
-                                        {user.createdAt
-                                            ? new Date(user.createdAt).toLocaleDateString('en-IN', {
-                                                timeZone: 'Asia/Kolkata',
-                                                day: '2-digit',
-                                                month: 'short',
-                                                year: '2-digit',
-                                            })
-                                            : '-'}
+                                    <div className="text-center text-xs text-gray-500 leading-tight">
+                                        {user.createdAt ? (
+                                            <>
+                                                <div>
+                                                    {new Date(user.createdAt).toLocaleDateString('en-IN', {
+                                                        timeZone: 'Asia/Kolkata',
+                                                        day: '2-digit',
+                                                        month: 'short',
+                                                        year: 'numeric',
+                                                    })}
+                                                </div>
+                                                <div className="text-[11px] text-gray-400 mt-0.5">
+                                                    {new Date(user.createdAt).toLocaleTimeString('en-IN', {
+                                                        timeZone: 'Asia/Kolkata',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false,
+                                                    })}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            '-'
+                                        )}
                                     </div>
                                     <div className="text-right text-emerald-600 font-semibold text-sm">
                                         +{Number(user.contribution || 0).toFixed(2)}

@@ -56,7 +56,7 @@ const MODAL_CFG = {
         ring: '#86efac', shadow: 'rgba(5,150,105,0.35)',
     },
     error: {
-        title: 'Something went wrong', Icon: X,
+        title: 'Please try again', Icon: X,
         grad: 'linear-gradient(135deg, #f87171 0%, #dc2626 100%)',
         ring: '#fca5a5', shadow: 'rgba(220,38,38,0.3)',
     },
@@ -80,7 +80,8 @@ export default function Recharge() {
     const [pending,    setPending]   = useState(null);
     const [depConfig,  setDepConfig] = useState({});
 
-    const toast = useCallback((type, msg) => setModal({ type, msg, title: MODAL_CFG[type]?.title }), []);
+    // title = the main line (what's wrong); msg = the helpful instruction (what to do).
+    const toast = useCallback((type, msg, title) => setModal({ type, msg, title: title ?? MODAL_CFG[type]?.title }), []);
     const clear  = useCallback(() => setModal(null), []);
 
     useEffect(() => {
@@ -98,7 +99,7 @@ export default function Recharge() {
                 ]);
                 setMoney(profileRes.data.user?.money || 0);
                 setDepConfig(configRes.data.data || {});
-            } catch { toast('error', 'Failed to load balance'); }
+            } catch { toast('error', 'We couldn’t load your latest balance. Please try again in a moment.', 'Couldn’t refresh balance'); }
             finally { setPageLoad(false); }
         })();
     }, [toast]);
@@ -134,13 +135,154 @@ export default function Recharge() {
     const payPath  = (ch, order) => ch === 'usdt' ? `/usdt-payment/${order._id}` : `/trx-payment/${order._id}`;
     const openTab  = (ch, order) => window.open(payPath(ch, order), '_blank');
 
+    // Paint a branded loading screen into the freshly-opened blank tab so the user
+    // never stares at a white about:blank while create-order is in flight.
+    const writeLoadingTab = (tab, ch) => {
+        if (!tab) return;
+
+        // TRX — glossy 3D TRON coin with orbiting sparks, rings & shimmer.
+        const trxHtml = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Preparing payment…</title><style>
+            *{box-sizing:border-box}
+            html,body{height:100%;margin:0}
+            body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;justify-content:center;background:linear-gradient(to bottom,#f3f4f6 0%,#e5e7eb 100%)}
+            .frame{position:relative;width:100%;min-height:100vh;min-height:100dvh;overflow:hidden;background:linear-gradient(165deg,#ffffff 0%,#f6f7f9 100%);display:flex;flex-direction:column;align-items:center;justify-content:center}
+            @media(min-width:1024px){.frame{max-width:400px;border-left:1px solid rgba(0,0,0,.06);border-right:1px solid rgba(0,0,0,.06);box-shadow:0 0 55px rgba(0,0,0,.10)}}
+            .amb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+            .a1{width:240px;height:240px;top:-70px;left:-70px;background:#EF0027;opacity:.10;animation:drift 9s ease-in-out infinite}
+            .a2{width:220px;height:220px;bottom:60px;right:-80px;background:#38bdf8;opacity:.10;animation:drift 11s ease-in-out infinite reverse}
+            .a3{width:200px;height:200px;bottom:-80px;left:10px;background:#f59e0b;opacity:.08;animation:drift 13s ease-in-out infinite}
+            .wave{position:absolute;background:#edeff3;opacity:.75}
+            .w1{width:180%;height:40%;top:-17%;right:-40%;border-radius:0 0 55% 45%/0 0 100% 100%;transform:rotate(-6deg)}
+            .w2{width:180%;height:38%;bottom:-17%;left:-40%;border-radius:48% 52% 0 0/100% 100% 0 0}
+            .stage{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
+            .badge{position:relative;width:212px;height:212px;display:flex;align-items:center;justify-content:center;margin-bottom:40px}
+            .halo{position:absolute;width:202px;height:202px;border-radius:50%;background:radial-gradient(circle,#EF0027,transparent 66%);opacity:.3;filter:blur(18px);animation:halo 2.6s ease-in-out infinite}
+            .ringDash{position:absolute;width:198px;height:198px;border-radius:50%;border:2px dashed rgba(239,0,39,.30);animation:spin 15s linear infinite}
+            .comet{position:absolute;width:172px;height:172px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 70%,#ff3b3b 90%,transparent);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 0);animation:spin 2.2s linear infinite}
+            .orbit{position:absolute;width:208px;height:208px;animation:spin 7s linear infinite}
+            .orbit b{position:absolute;top:-4px;left:50%;width:9px;height:9px;border-radius:50%;background:#ff5a6a;box-shadow:0 0 12px 2px rgba(239,0,39,.75);transform:translateX(-50%)}
+            .orbit2{position:absolute;width:178px;height:178px;animation:spin 5s linear infinite reverse}
+            .orbit2 b{position:absolute;top:-3px;left:50%;width:6px;height:6px;border-radius:50%;background:#fca5a5;box-shadow:0 0 9px 1px rgba(239,0,39,.7);transform:translateX(-50%)}
+            .shadow{position:absolute;bottom:22px;left:50%;width:98px;height:20px;border-radius:50%;background:rgba(60,0,10,.5);filter:blur(12px);transform:translateX(-50%);animation:shadowPulse 3.6s ease-in-out infinite}
+            .coin{position:relative;width:132px;height:132px;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 38% 30%,#ffffff 0%,#ffdede 16%,#f24b5f 54%,#EF0027 78%,#b30020 100%);box-shadow:0 24px 42px -12px rgba(200,0,25,.5),inset 0 -12px 24px rgba(140,0,15,.45),inset 0 10px 18px rgba(255,255,255,.55);animation:float 3.6s ease-in-out infinite;display:flex;align-items:center;justify-content:center}
+            .gloss{position:absolute;top:11%;left:17%;width:56%;height:40%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.9),rgba(255,255,255,0) 70%);filter:blur(2px)}
+            .shine{position:absolute;top:-12%;left:-75%;width:55%;height:124%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-16deg);animation:shine 3.4s ease-in-out infinite}
+            .emblem{position:relative;z-index:3}
+            .title{font-size:30px;line-height:1.14;font-weight:800;letter-spacing:-.5px;text-align:center;margin:0;padding:0 24px;background:linear-gradient(90deg,#0f172a 25%,#64748b 50%,#0f172a 75%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 3.2s linear infinite}
+            .sub{color:#64748b;font-size:15px;font-weight:500;text-align:center;margin:14px 0 0;padding:0 28px}
+            .bar{position:relative;width:160px;height:5px;border-radius:9999px;background:rgba(239,0,39,.12);overflow:hidden;margin-top:30px}
+            .bar i{position:absolute;top:0;left:0;height:100%;width:42%;border-radius:9999px;background:linear-gradient(90deg,#ff6b6b,#EF0027);animation:load 1.3s cubic-bezier(.65,0,.35,1) infinite}
+            @keyframes spin{to{transform:rotate(360deg)}}
+            @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+            @keyframes halo{0%,100%{opacity:.22;transform:scale(1)}50%{opacity:.42;transform:scale(1.1)}}
+            @keyframes shine{0%{left:-75%}55%,100%{left:150%}}
+            @keyframes shadowPulse{0%,100%{opacity:.5;transform:translateX(-50%) scale(1)}50%{opacity:.3;transform:translateX(-50%) scale(.8)}}
+            @keyframes sheen{to{background-position:-200% 0}}
+            @keyframes load{0%{left:-42%}100%{left:100%}}
+            @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(16px,20px)}}
+            @media(prefers-reduced-motion:reduce){.halo,.ringDash,.comet,.orbit,.orbit2,.coin,.shine,.shadow,.title,.bar i,.amb{animation:none!important}}
+        </style></head><body><div class="frame">
+        <div class="amb a1"></div><div class="amb a2"></div><div class="amb a3"></div>
+        <div class="wave w1"></div><div class="wave w2"></div>
+        <div class="stage">
+        <div class="badge">
+            <div class="halo"></div><div class="ringDash"></div><div class="comet"></div>
+            <div class="orbit"><b></b></div><div class="orbit2"><b></b></div>
+            <div class="shadow"></div>
+            <div class="coin"><div class="gloss"></div><div class="shine"></div>
+            <svg class="emblem" width="62" height="62" viewBox="0 0 32 32" fill="none" stroke="#a50f1b" stroke-width="0.7" stroke-linejoin="round"><path d="M21.932 9.913L7.5 7.257l7.595 19.112 10.583-12.865-3.746-3.591zm-.232 1.17l2.208 2.117-6.038 1.093 3.83-3.21zm-5.142 3.028l-6.364-5.278 10.402 1.914-4.038 3.364zm-.44 1.078l-1.087 8.98-5.115-12.868 6.202 3.888zm1.348.427l5.208-.943-5.997 7.29.789-6.347z"/></svg>
+            </div>
+        </div>
+        <p class="title">Preparing your<br>secure payment...</p>
+        <p class="sub">Setting up your TRON network deposit address</p>
+        <div class="bar"><i></i></div>
+        </div>
+        </div></body></html>`;
+
+        // USDT — glossy 3D Tether coin with orbiting sparks, rings & shimmer.
+        const usdtHtml = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Preparing payment…</title><style>
+            *{box-sizing:border-box}
+            html,body{height:100%;margin:0}
+            body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;justify-content:center;background:linear-gradient(to bottom,#f3f4f6 0%,#e5e7eb 100%)}
+            .frame{position:relative;width:100%;min-height:100vh;min-height:100dvh;overflow:hidden;background:linear-gradient(165deg,#ffffff 0%,#f6f7f9 100%);display:flex;flex-direction:column;align-items:center;justify-content:center}
+            @media(min-width:1024px){.frame{max-width:400px;border-left:1px solid rgba(0,0,0,.06);border-right:1px solid rgba(0,0,0,.06);box-shadow:0 0 55px rgba(0,0,0,.10)}}
+            .amb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+            .a1{width:240px;height:240px;top:-70px;left:-70px;background:#26a17b;opacity:.11;animation:drift 9s ease-in-out infinite}
+            .a2{width:220px;height:220px;bottom:60px;right:-80px;background:#38bdf8;opacity:.10;animation:drift 11s ease-in-out infinite reverse}
+            .a3{width:200px;height:200px;bottom:-80px;left:10px;background:#f59e0b;opacity:.08;animation:drift 13s ease-in-out infinite}
+            .wave{position:absolute;background:#edeff3;opacity:.75}
+            .w1{width:180%;height:40%;top:-17%;right:-40%;border-radius:0 0 55% 45%/0 0 100% 100%;transform:rotate(-6deg)}
+            .w2{width:180%;height:38%;bottom:-17%;left:-40%;border-radius:48% 52% 0 0/100% 100% 0 0}
+            .stage{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
+            .badge{position:relative;width:212px;height:212px;display:flex;align-items:center;justify-content:center;margin-bottom:40px}
+            .halo{position:absolute;width:202px;height:202px;border-radius:50%;background:radial-gradient(circle,#26a17b,transparent 66%);opacity:.3;filter:blur(18px);animation:halo 2.6s ease-in-out infinite}
+            .ringDash{position:absolute;width:198px;height:198px;border-radius:50%;border:2px dashed rgba(38,161,123,.32);animation:spin 15s linear infinite}
+            .comet{position:absolute;width:172px;height:172px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 70%,#34d399 90%,transparent);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 0);animation:spin 2.2s linear infinite}
+            .orbit{position:absolute;width:208px;height:208px;animation:spin 7s linear infinite}
+            .orbit b{position:absolute;top:-4px;left:50%;width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 12px 2px rgba(38,161,123,.75);transform:translateX(-50%)}
+            .orbit2{position:absolute;width:178px;height:178px;animation:spin 5s linear infinite reverse}
+            .orbit2 b{position:absolute;top:-3px;left:50%;width:6px;height:6px;border-radius:50%;background:#6ee7b7;box-shadow:0 0 9px 1px rgba(38,161,123,.7);transform:translateX(-50%)}
+            .shadow{position:absolute;bottom:22px;left:50%;width:98px;height:20px;border-radius:50%;background:rgba(6,50,38,.5);filter:blur(12px);transform:translateX(-50%);animation:shadowPulse 3.6s ease-in-out infinite}
+            .coin{position:relative;width:132px;height:132px;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 38% 30%,#ffffff 0%,#d6f5ea 16%,#3fc79e 54%,#26a17b 78%,#1a7a5e 100%);box-shadow:0 24px 42px -12px rgba(20,120,90,.5),inset 0 -12px 24px rgba(10,70,52,.45),inset 0 10px 18px rgba(255,255,255,.55);animation:float 3.6s ease-in-out infinite;display:flex;align-items:center;justify-content:center}
+            .gloss{position:absolute;top:11%;left:17%;width:56%;height:40%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.9),rgba(255,255,255,0) 70%);filter:blur(2px)}
+            .shine{position:absolute;top:-12%;left:-75%;width:55%;height:124%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-16deg);animation:shine 3.4s ease-in-out infinite}
+            .emblem{position:relative;z-index:3}
+            .title{font-size:30px;line-height:1.14;font-weight:800;letter-spacing:-.5px;text-align:center;margin:0;padding:0 24px;background:linear-gradient(90deg,#0f172a 25%,#64748b 50%,#0f172a 75%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 3.2s linear infinite}
+            .sub{color:#64748b;font-size:15px;font-weight:500;text-align:center;margin:14px 0 0;padding:0 28px}
+            .bar{position:relative;width:160px;height:5px;border-radius:9999px;background:rgba(38,161,123,.14);overflow:hidden;margin-top:30px}
+            .bar i{position:absolute;top:0;left:0;height:100%;width:42%;border-radius:9999px;background:linear-gradient(90deg,#34d399,#26a17b);animation:load 1.3s cubic-bezier(.65,0,.35,1) infinite}
+            @keyframes spin{to{transform:rotate(360deg)}}
+            @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+            @keyframes halo{0%,100%{opacity:.22;transform:scale(1)}50%{opacity:.42;transform:scale(1.1)}}
+            @keyframes shine{0%{left:-75%}55%,100%{left:150%}}
+            @keyframes shadowPulse{0%,100%{opacity:.5;transform:translateX(-50%) scale(1)}50%{opacity:.3;transform:translateX(-50%) scale(.8)}}
+            @keyframes sheen{to{background-position:-200% 0}}
+            @keyframes load{0%{left:-42%}100%{left:100%}}
+            @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(16px,20px)}}
+            @media(prefers-reduced-motion:reduce){.halo,.ringDash,.comet,.orbit,.orbit2,.coin,.shine,.shadow,.title,.bar i,.amb{animation:none!important}}
+        </style></head><body><div class="frame">
+        <div class="amb a1"></div><div class="amb a2"></div><div class="amb a3"></div>
+        <div class="wave w1"></div><div class="wave w2"></div>
+        <div class="stage">
+        <div class="badge">
+            <div class="halo"></div><div class="ringDash"></div><div class="comet"></div>
+            <div class="orbit"><b></b></div><div class="orbit2"><b></b></div>
+            <div class="shadow"></div>
+            <div class="coin"><div class="gloss"></div><div class="shine"></div>
+            <svg class="emblem" width="60" height="60" viewBox="0 0 100 100" fill="none"><rect x="12" y="14" width="76" height="20" rx="10" fill="#fff" opacity="0.95"/><rect x="40" y="14" width="20" height="58" rx="10" fill="#fff" opacity="0.95"/><rect x="24" y="57" width="52" height="11" rx="5.5" fill="#fff" opacity="0.6"/></svg>
+            </div>
+        </div>
+        <p class="title">Preparing your<br>secure payment...</p>
+        <p class="sub">Setting up your TRC20 network deposit address</p>
+        <div class="bar"><i></i></div>
+        </div>
+        </div></body></html>`;
+
+        try {
+            tab.document.write(ch === 'usdt' ? usdtHtml : trxHtml);
+            tab.document.close();
+        } catch { /* cross-origin/blocked — safe to ignore */ }
+    };
+
     const submit = async () => {
-        if (!canPay) return;
+        if (!canPay) {
+            if (!amount || amount <= 0) {
+                toast('warning', 'Enter or tap a quick amount below to continue.', 'Enter a recharge amount');
+            } else if (tooLow) {
+                toast('warning', `The minimum recharge is ₹${minAmt.toLocaleString('en-IN')}. Please enter a higher amount.`, 'Amount is below the minimum');
+            } else if (tooHigh) {
+                toast('warning', `The maximum recharge is ₹${maxAmt.toLocaleString('en-IN')}. Please enter a lower amount.`, 'Amount is above the maximum');
+            } else {
+                toast('warning', `Please enter an amount between ₹${minAmt.toLocaleString('en-IN')} and ₹${maxAmt.toLocaleString('en-IN')}.`, 'Check the amount');
+            }
+            return;
+        }
         setLoading(true);
         try {
             if (channel === 'usdt' || channel === 'trx') {
                 // Open blank tab synchronously (before any await) so mobile browsers don't block it
                 const tab = window.open('', '_blank');
+                writeLoadingTab(tab, channel);
                 try {
                     const pr = await axios.get(`/${channel}/my-pending`);
                     if (pr.data.order) {
@@ -155,7 +297,7 @@ export default function Recharge() {
                         else window.open(payPath(channel, r.data.order), '_blank');
                     } else {
                         tab?.close();
-                        toast('error', r.data.message || 'Failed to create order.');
+                        toast('error', r.data.message || 'We couldn’t set up your deposit just now. Please try again in a moment.', 'Deposit couldn’t start');
                     }
                 } catch (e) {
                     tab?.close();
@@ -165,9 +307,9 @@ export default function Recharge() {
                 const r   = await axios.post('/payment/create', { amount, channel });
                 const url = r.data.payment_url;
                 if (url) { const w = window.open(url, '_blank'); if (!w || w.closed) window.location.href = url; }
-                else toast('error', 'No payment URL received.');
+                else toast('error', 'We couldn’t open the payment page. Please try again.', 'Payment couldn’t start');
             }
-        } catch (e) { toast('error', e.response?.data?.error || e.response?.data?.message || 'Payment failed. Try again.'); }
+        } catch (e) { toast('error', e.response?.data?.error || e.response?.data?.message || 'Please check your internet connection and try again.', 'Payment couldn’t start'); }
         finally     { setLoading(false); }
     };
 
@@ -177,6 +319,7 @@ export default function Recharge() {
         setPending(null); setLoading(true);
         // Open blank tab synchronously before any await so mobile browsers allow it
         const tab = window.open('', '_blank');
+        writeLoadingTab(tab, ch);
         try {
             await axios.post(`/${ch}/cancel-order/${order._id}`);
             const r = await axios.post(`/${ch}/create-order`, { inrAmount: amount });
@@ -185,11 +328,11 @@ export default function Recharge() {
                 else window.open(payPath(ch, r.data.order), '_blank');
             } else {
                 tab?.close();
-                toast('error', r.data.message || 'Failed.');
+                toast('error', r.data.message || 'We couldn’t set up your deposit just now. Please try again in a moment.', 'Deposit couldn’t start');
             }
         } catch (e) {
             tab?.close();
-            toast('error', e.response?.data?.message || 'Failed.');
+            toast('error', e.response?.data?.message || 'Please check your internet connection and try again.', 'Payment couldn’t start');
         }
         finally { setLoading(false); }
     };

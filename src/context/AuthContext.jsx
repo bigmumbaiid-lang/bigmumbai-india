@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import axios from "../utils/axios";
+import { startHeartbeat, stopHeartbeat } from "../utils/heartbeat";
 
 export const AuthContext = createContext();
 
@@ -109,6 +110,15 @@ export const AuthProvider = ({ children }) => {
         initAuth();
 
     }, []);
+
+    // Run the activity heartbeat whenever we hold a session token. This covers
+    // login, session-restore-on-refresh, and logout uniformly — start on token
+    // present, stop when it clears, and always stop on unmount.
+    useEffect(() => {
+        if (token) startHeartbeat();
+        else stopHeartbeat();
+        return () => stopHeartbeat();
+    }, [token]);
 
     // Update only the balance after a game action, without a full refetch.
     // Added for the Mines feature; does not change any existing behavior.

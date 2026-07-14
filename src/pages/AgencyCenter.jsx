@@ -8,11 +8,10 @@ const BRAND_C    = '#b1835a';
 const PAGE_SIZE  = 20;
 
 const DATE_OPTS = [
-    { key: 'all',   label: 'All' },
-    { key: 'today', label: 'Today' },
-    { key: 'week',  label: 'This Week' },
-    { key: 'month', label: 'This Month' },
-    { key: 'last',  label: 'Last Month' },
+    { key: 'all',    label: 'All' },
+    { key: 'today',  label: 'Today' },
+    { key: 'last7',  label: 'Last 7 Days' },
+    { key: 'last30', label: 'Last 30 Days' },
 ];
 
 const SOURCE_NOTE = {
@@ -36,7 +35,7 @@ const fmtDate = (iso) => {
 };
 
 const inr = (v) =>
-    Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function AgencyCenter() {
     const navigate = useNavigate();
@@ -58,8 +57,10 @@ export default function AgencyCenter() {
 
     /* ── Stats ── */
     useEffect(() => {
-        axios.get('/user/agency/stats').then(r => setStats(r.data.stats)).catch(() => {});
-    }, []);
+        axios.get('/user/agency/stats', { params: { dateFilter } })
+            .then(r => setStats(r.data.stats))
+            .catch(() => {});
+    }, [dateFilter]);
 
     /* ── Transactions ── */
     const fetchPage = useCallback(async (pg, replace = false) => {

@@ -1,22 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Copy, Check, RefreshCw, X, Zap, Clock, Globe, ArrowUpRight, Hash, Link2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Copy, Check, RefreshCw, Zap, Clock, Globe, ArrowUpRight, Hash, Link2, AlertTriangle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import axios from '../utils/axios';
 
 const POLL_INTERVAL_MS = 10_000;
+const ORDER_TTL_MS = 15 * 60 * 1000;
 const BRAND        = 'linear-gradient(135deg, #d9ad82 0%, #b1835a 100%)';
-const BRAND_C      = '#b1835a';
+// Red is kept only for the TRON logo tile and the destructive Cancel action.
 const TRX_COLOR    = '#EF0027';
 const TRX_GRAD     = 'linear-gradient(135deg, #EF0027 0%, #b30020 100%)';
+// Green is the primary UI accent (text, steps, status, QR, amount).
+const ACCENT       = '#059669';
+const ACCENT_GRAD  = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+const ACCENT_TINT  = '#ecfdf5';
+const ACCENT_BORDER = '#a7f3d0';
 const SUCCESS_GRAD = 'linear-gradient(135deg, #34d399 0%, #059669 100%)';
 const SUCCESS_C    = '#059669';
 
+// Official TRON (TRX) emblem — renders white so it shows on the red tile.
 const TrxLogo = ({ size = 32 }) => (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        <polygon points="50,4 96,28 50,56 4,28" fill="white" opacity="0.95" />
-        <polygon points="50,4 96,28 78,90 22,90 4,28" fill="white" opacity="0.12" />
-        <line x1="50" y1="56" x2="22" y2="90" stroke="white" strokeWidth="7" strokeLinecap="round" opacity="0.65" />
-        <line x1="50" y1="56" x2="78" y2="90" stroke="white" strokeWidth="7" strokeLinecap="round" opacity="0.65" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+        <path
+            fill="white"
+            d="M21.932 9.913L7.5 7.257l7.595 19.112 10.583-12.865-3.746-3.591zm-.232 1.17l2.208 2.117-6.038 1.093 3.83-3.21zm-5.142 3.028l-6.364-5.278 10.402 1.914-4.038 3.364zm-.44 1.078l-1.087 8.98-5.115-12.868 6.202 3.888zm1.348.427l5.208-.943-5.997 7.29.789-6.347z"
+        />
     </svg>
 );
 
@@ -53,6 +60,7 @@ function copyText(text) {
     });
 }
 
+// Ghost copy button — plain accent text + icon, no pill.
 function CopyBtn({ text, label = 'Copy' }) {
     const [copied, setCopied] = useState(false);
     const t = useRef(null);
@@ -64,13 +72,10 @@ function CopyBtn({ text, label = 'Copy' }) {
     return (
         <button
             onClick={go}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 border"
-            style={copied
-                ? { background: '#f0fdf4', borderColor: '#86efac', color: '#16a34a' }
-                : { background: '#fff5f0', borderColor: '#ffd0c8', color: TRX_COLOR }
-            }
+            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide transition-all active:scale-95"
+            style={{ color: copied ? '#16a34a' : ACCENT }}
         >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
+            {copied ? <Check size={13} /> : <Copy size={13} />}
             {copied ? 'Copied!' : label}
         </button>
     );
@@ -87,16 +92,20 @@ function CopyIconBtn({ text }) {
     return (
         <button
             onClick={go}
-            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
-            style={{ background: copied ? '#f0fdf4' : '#f9fafb', color: copied ? '#16a34a' : '#9ca3af' }}
+            className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all active:scale-90 border"
+            style={{
+                background: copied ? '#f0fdf4' : '#f9fafb',
+                borderColor: copied ? '#86efac' : '#e5e7eb',
+                color: copied ? '#16a34a' : '#9ca3af',
+            }}
         >
             {copied ? <Check size={12} /> : <Copy size={12} />}
         </button>
     );
 }
 
-const OUTER = 'flex items-center justify-center bg-gray-50 min-h-screen';
-const INNER = 'w-full lg:max-w-[400px] mx-auto h-screen flex flex-col overflow-hidden shadow-2xl border border-gray-200 bg-[#f7f8ff]';
+const OUTER = 'flex items-center justify-center bg-gradient-to-b from-gray-50 via-gray-100 to-gray-200 min-h-screen';
+const INNER = 'relative w-full lg:max-w-[400px] mx-auto h-screen flex flex-col overflow-hidden shadow-2xl border border-gray-200/70 bg-white';
 
 export default function TrxPayment() {
     const { orderId } = useParams();
@@ -142,7 +151,9 @@ export default function TrxPayment() {
                 }
             }
             if (res.data.success) {
-                setStatus(res.data.status);
+                // A cancelled order has no live deposit details — treat it like an
+                // expired one so we don't fall through to a blank "pending" screen.
+                setStatus(res.data.status === 'cancelled' ? 'expired' : res.data.status);
                 if (res.data.status === 'completed') {
                     setCreditedInr(res.data.inrAmount);
                     setCreditedTrx(res.data.expectedTrxAmount);
@@ -180,12 +191,20 @@ export default function TrxPayment() {
         } catch { }
     }, [orderId]);
 
+    // Once the address holds the FULL expected amount (≥99.9%, matching the
+    // backend threshold), the backend is about to complete the order — the tx
+    // index just lags a few seconds behind. Poll the status aggressively during
+    // that window so the success screen appears almost immediately. A partial /
+    // underpaid balance is NOT treated as detected, since it won't be credited.
+    const _expectedTrx    = order?.expectedTrxAmount || 0;
+    const balanceDetected = liveBalance != null && _expectedTrx > 0 && liveBalance >= _expectedTrx * 0.999;
+
     useEffect(() => {
         if (status !== 'pending') return;
         poll();
-        pollRef.current = setInterval(poll, POLL_INTERVAL_MS);
+        pollRef.current = setInterval(poll, balanceDetected ? 3000 : POLL_INTERVAL_MS);
         return () => clearInterval(pollRef.current);
-    }, [status, poll]);
+    }, [status, poll, balanceDetected]);
 
     const checkBalance = useCallback(async () => {
         try {
@@ -230,17 +249,16 @@ export default function TrxPayment() {
     if (status === 'completed') return (
         <div className={OUTER} style={{ minHeight: '100dvh' }}>
             <div className={INNER} style={{ height: '100dvh' }}>
-                <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative overflow-hidden">
-                    {/* Ambient glows */}
-                    <div className="absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: SUCCESS_GRAD }} />
-                    <div className="absolute -bottom-20 -right-16 w-64 h-64 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: TRX_GRAD }} />
+                <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
 
                     {/* Success badge */}
                     <div className="animate-popIn relative flex items-center justify-center mb-5 shrink-0">
-                        <div className="absolute w-32 h-32 rounded-full opacity-20 blur-2xl" style={{ background: SUCCESS_GRAD }} />
-                        <div className="absolute w-24 h-24 rounded-full" style={{ border: '2px solid #86efac' }} />
-                        <div className="relative w-[72px] h-[72px] rounded-full flex items-center justify-center" style={{ background: SUCCESS_GRAD, boxShadow: '0 10px 26px rgba(5,150,105,0.35)' }}>
-                            <Check size={32} className="text-white" strokeWidth={3} />
+                        <div className="absolute w-24 h-24 rounded-full opacity-25 blur-xl" style={{ background: SUCCESS_GRAD }} />
+                        <div
+                            className="relative w-[76px] h-[76px] rounded-3xl flex items-center justify-center"
+                            style={{ background: SUCCESS_GRAD, boxShadow: '0 14px 30px rgba(5,150,105,0.32)' }}
+                        >
+                            <Check size={36} className="text-white" strokeWidth={3} />
                         </div>
                     </div>
 
@@ -248,12 +266,12 @@ export default function TrxPayment() {
                     <p className="animate-fadeUp text-gray-400 text-xs mt-1 mb-5">Confirmed on the TRON network</p>
 
                     {/* Receipt card */}
-                    <div className="animate-fadeUp relative z-10 w-full bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-                        <div className="h-1.5" style={{ background: TRX_GRAD }} />
+                    <div className="animate-fadeUp w-full bg-white rounded-2xl border border-gray-100 shadow-md overflow-hidden">
+                        <div className="h-1.5" style={{ background: ACCENT_GRAD }} />
 
                         <div className="px-6 pt-5 pb-4 text-center">
                             {creditedInr != null && (
-                                <p className="text-3xl font-semibold tracking-tight" style={{ color: SUCCESS_C }}>
+                                <p className="text-3xl font-bold tracking-tight" style={{ color: SUCCESS_C }}>
                                     +₹{Number(creditedInr).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </p>
                             )}
@@ -296,8 +314,8 @@ export default function TrxPayment() {
 
                     <button
                         onClick={closeTab}
-                        className="animate-fadeUp relative z-10 w-full mt-6 px-10 py-3.5 rounded-2xl text-white font-medium text-sm shadow-lg active:scale-[0.97] transition-transform"
-                        style={{ background: TRX_GRAD, boxShadow: '0 8px 20px rgba(239,0,39,0.25)' }}
+                        className="animate-fadeUp w-full mt-6 px-10 py-3.5 rounded-xl text-white font-semibold text-sm active:scale-[0.98] transition-transform"
+                        style={{ background: ACCENT_GRAD, boxShadow: '0 10px 24px rgba(5,150,105,0.24)' }}
                     >
                         Done
                     </button>
@@ -317,8 +335,8 @@ export default function TrxPayment() {
         <div className={OUTER} style={{ minHeight: '100dvh' }}>
             <div className={INNER} style={{ height: '100dvh' }}>
                 <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5">
-                    <div className="w-24 h-24 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center">
-                        <AlertTriangle size={36} className="text-red-400" />
+                    <div className="w-20 h-20 rounded-3xl bg-red-50 border border-red-200 flex items-center justify-center">
+                        <AlertTriangle size={34} className="text-red-400" />
                     </div>
                     <div className="text-center space-y-2">
                         <p className="text-gray-800 text-2xl font-semibold">Invalid Payment Link</p>
@@ -326,7 +344,7 @@ export default function TrxPayment() {
                     </div>
                     <button
                         onClick={closeTab}
-                        className="flex items-center gap-2 px-10 py-3.5 rounded-2xl text-white font-medium text-sm shadow-lg active:scale-[0.97] transition-transform"
+                        className="flex items-center gap-2 px-10 py-3.5 rounded-xl text-white font-semibold text-sm active:scale-[0.98] transition-transform"
                         style={{ background: BRAND }}
                     >
                         <ArrowLeft size={16} /> Go Back
@@ -341,16 +359,16 @@ export default function TrxPayment() {
         <div className={OUTER} style={{ minHeight: '100dvh' }}>
             <div className={INNER} style={{ height: '100dvh' }}>
                 <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5">
-                    <div className="w-24 h-24 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center">
-                        <RefreshCw size={36} className="text-red-400" />
+                    <div className="w-20 h-20 rounded-3xl bg-red-50 border border-red-200 flex items-center justify-center">
+                        <RefreshCw size={34} className="text-red-400" />
                     </div>
                     <div className="text-center space-y-2">
-                        <p className="text-gray-800 text-2xl font-extrabold">Order Expired</p>
+                        <p className="text-gray-800 text-2xl font-semibold">Order Expired</p>
                         <p className="text-gray-400 text-sm">This payment order has timed out. Please create a new one.</p>
                     </div>
                     <button
                         onClick={closeTab}
-                        className="px-10 py-3.5 rounded-2xl text-white font-bold text-sm shadow-lg active:scale-[0.97] transition-transform"
+                        className="px-10 py-3.5 rounded-xl text-white font-semibold text-sm active:scale-[0.98] transition-transform"
                         style={{ background: BRAND }}
                     >
                         Try Again
@@ -363,121 +381,209 @@ export default function TrxPayment() {
     const walletAddress = order?.walletAddress || '';
     const trxAmount     = order?.expectedTrxAmount || 0;
     const inrAmount     = order?.inrAmount || 0;
-    const qrUrl         = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(walletAddress)}`;
+    // ecc=H (high error correction) so the centered TRON logo doesn't break scanning.
+    const qrUrl         = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&ecc=H&data=${encodeURIComponent(walletAddress)}`;
+
+    // Interpret the on-chain balance against what's expected:
+    //  • sufficient → enough received, backend is about to credit (reassure)
+    //  • underpaid  → funds arrived but below the required amount (tell them how
+    //                 much more to send — the backend sums top-ups, so it works)
+    const requiredTrx = trxAmount * 0.999; // matches backend acceptance threshold (full amount)
+    const hasFunds    = liveBalance != null && liveBalance > 0;
+    const sufficient  = hasFunds && liveBalance >= requiredTrx;
+    const underpaid   = hasFunds && liveBalance < requiredTrx;
+    const shortfall   = underpaid ? Math.max(0, trxAmount - liveBalance) : 0;
+    const detected    = sufficient;
+
+    const progressPct = Math.max(0, Math.min(100, (remaining / ORDER_TTL_MS) * 100));
+    const activeStep  = detected ? 1 : 0; // 0 = waiting, 1 = confirming, 2 = credited (success screen)
+    const steps       = ['Send', 'Confirm', 'Credited'];
+
+    // Status pill tone — green for listening/detected, amber for underpaid.
+    const statusMsg = detected
+        ? 'Payment detected — confirming…'
+        : underpaid
+            ? `Underpaid — send ${shortfall.toFixed(2)} TRX more`
+            : 'Listening for your transfer…';
+    const statusBg   = underpaid ? '#fffbeb' : 'linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%)';
+    const statusDot  = underpaid ? '#f59e0b' : '#10b981';
+    const statusText = underpaid ? '#d97706' : '#047857';
 
     return (
         <div className={OUTER} style={{ minHeight: '100dvh' }}>
             <div className={INNER} style={{ height: '100dvh' }}>
 
+                {/* Soft multi-colour ambient glows so the page isn't plain white (z-0) */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+                    <div className="absolute -top-16 -left-16 w-56 h-56 rounded-full blur-3xl" style={{ background: '#10b981', opacity: 0.12 }} />
+                    <div className="absolute top-1/3 -right-20 w-64 h-64 rounded-full blur-3xl" style={{ background: '#38bdf8', opacity: 0.11 }} />
+                    <div className="absolute top-2/3 -left-16 w-56 h-56 rounded-full blur-3xl" style={{ background: '#f59e0b', opacity: 0.09 }} />
+                    <div className="absolute -bottom-20 right-1/4 w-60 h-60 rounded-full blur-3xl" style={{ background: '#a855f7', opacity: 0.08 }} />
+                </div>
+
                 {/* Header */}
-                <div
-                    className="flex-shrink-0 bg-white flex items-center justify-between px-4 py-3.5 relative z-10"
-                    style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' }}
-                >
+                <div className="flex-shrink-0 bg-white/80 backdrop-blur flex items-center gap-3 px-3 h-[68px] border-b border-gray-100 relative z-10">
                     <button
                         onClick={closeTab}
-                        className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform bg-gray-50 border border-gray-200"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95 transition-all hover:bg-gray-100 text-gray-500"
+                        aria-label="Back"
                     >
-                        <X size={16} className="text-gray-600" />
+                        <ArrowLeft size={20} />
                     </button>
-                    <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center shadow-sm" style={{ background: TRX_GRAD }}>
-                            <TrxLogo size={16} />
-                        </div>
-                        <p className="text-gray-800 font-bold text-base">TRX Payment</p>
+                    <div className="relative w-11 h-11 rounded-xl flex items-center justify-center shadow-sm overflow-hidden shrink-0" style={{ background: TRX_GRAD }}>
+                        <TrxLogo size={30} />
+                        <span className="trx-shine absolute inset-y-0 -left-1/2 w-1/2 pointer-events-none"
+                            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)', transform: 'skewX(-18deg)' }} />
                     </div>
-                    <div
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${isUrgent ? 'animate-pulse' : ''}`}
-                        style={isUrgent
-                            ? { background: '#fff1f2', borderColor: '#fecaca', color: '#ef4444' }
-                            : { background: '#fff5f0', borderColor: '#ffd0c8', color: TRX_COLOR }
-                        }
-                    >
-                        <Clock size={11} />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-gray-900 font-bold text-[17px] leading-tight">TRX Payment</p>
+                        <p className="text-[11.5px] font-semibold leading-tight mt-0.5">
+                            <span className="text-gray-400">TRON Network</span>
+                            <span style={{ color: ACCENT }}> • Mainnet</span>
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[15px] font-bold tabular-nums pr-1" style={{ color: isUrgent ? '#ef4444' : '#9ca3af' }}>
+                        <Clock size={13} />
                         {mins}:{secs}
                     </div>
                 </div>
 
-                {/* Scrollable content */}
-                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+                {/* Countdown progress — thin, drains as the window closes */}
+                <div className="flex-shrink-0 h-[3px] bg-gray-100 overflow-hidden relative z-10">
+                    <div
+                        className="h-full transition-[width] duration-1000 ease-linear"
+                        style={{ width: `${progressPct}%`, background: isUrgent ? '#ef4444' : ACCENT_GRAD }}
+                    />
+                </div>
 
-                    {/* Hero banner */}
-                    <div className="rounded-2xl p-4 text-white relative overflow-hidden" style={{ background: TRX_GRAD }}>
-                        <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/10" />
-                        <div className="absolute -bottom-5 -left-4 w-24 h-24 rounded-full bg-black/10" />
-                        <div
-                            className="absolute inset-0 opacity-[0.06] pointer-events-none"
-                            style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 1px, transparent 12px)' }}
-                        />
-                        <div className="relative flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' }}>
-                                <TrxLogo size={38} />
-                            </div>
-                            <div>
-                                <p className="text-white font-bold text-lg leading-tight">Send TRX</p>
-                                <span className="mt-2 inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-white/20 text-white tracking-wide">
-                                    TRON NETWORK
-                                </span>
-                            </div>
-                        </div>
+                {/* Scrollable content */}
+                <div className="trx-scroll flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 relative z-10" style={{ WebkitOverflowScrolling: 'touch' }}>
+
+                    {/* Status pill */}
+                    <div className="trx-rise relative overflow-hidden rounded-lg px-4 py-3 flex items-center justify-center gap-2.5" style={{ background: statusBg, animationDelay: '0s' }}>
+                        {/* sheen sweep */}
+                        <span className="trx-statusshine pointer-events-none absolute inset-y-0 -left-1/3 w-1/3"
+                            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)', transform: 'skewX(-18deg)' }} />
+                        {/* sonar dot */}
+                        <span className="relative z-10 flex h-2.5 w-2.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: statusDot }} />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: statusDot }} />
+                        </span>
+                        <p className="relative z-10 text-[13.5px] font-semibold" style={{ color: statusText }}>{statusMsg}</p>
+                    </div>
+
+                    {/* Stepper */}
+                    <div className="trx-rise flex items-start px-1 pt-1" style={{ animationDelay: '.05s' }}>
+                        {steps.map((label, i) => {
+                            const done = i < activeStep;
+                            const active = i === activeStep;
+                            return (
+                                <React.Fragment key={label}>
+                                    <div className="flex-1 flex flex-col items-center">
+                                        <div
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-base font-bold transition-colors ${active ? 'trx-step-pulse' : ''}`}
+                                            style={
+                                                done || active
+                                                    ? { background: ACCENT_GRAD, color: '#fff' }
+                                                    : { background: '#e9ebef', color: '#9ca3af' }
+                                            }
+                                        >
+                                            {done ? <Check size={17} strokeWidth={3} /> : i + 1}
+                                        </div>
+                                        <span
+                                            className="mt-2 text-[10px] font-bold uppercase tracking-widest leading-none transition-colors"
+                                            style={{ color: done || active ? ACCENT : '#9ca3af' }}
+                                        >
+                                            {label}
+                                        </span>
+                                    </div>
+                                    {i < steps.length - 1 && (
+                                        <div className="flex-1 h-[2px] mt-5 mx-2 relative overflow-hidden bg-gray-200 rounded-full">
+                                            <div
+                                                className={i === activeStep ? 'trx-flow' : ''}
+                                                style={{
+                                                    position: 'absolute', inset: 0,
+                                                    background: i < activeStep
+                                                        ? ACCENT
+                                                        : i === activeStep
+                                                            ? `linear-gradient(90deg, ${ACCENT}, transparent)`
+                                                            : 'transparent',
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
 
                     {/* Deposit address card — QR + wallet address */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="h-1" style={{ background: TRX_GRAD }} />
-                        <div className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Deposit Address</span>
-                                <CopyBtn text={walletAddress} />
-                            </div>
-
-                            <div className="flex flex-col items-center gap-3 py-1">
-                                <div className="p-3 rounded-2xl" style={{ border: '2px solid #fecaca' }}>
-                                    <img src={qrUrl} alt="Wallet QR" width={168} height={168} className="block rounded-lg" />
-                                </div>
-                                <p className="text-[11px] text-gray-400">Scan with your crypto wallet app</p>
-                            </div>
-
-                            <div className="h-px bg-gray-100 my-3.5" />
-
-                            <p className="text-gray-700 text-[12.5px] font-mono font-semibold break-all leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-                                {walletAddress}
-                            </p>
+                    <div className="trx-rise bg-white rounded-xl border border-gray-100 shadow-sm p-4" style={{ animationDelay: '.1s' }}>
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">TRX Deposit</span>
+                            <CopyBtn text={walletAddress} />
                         </div>
+
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="relative p-3 bg-white rounded-xl overflow-hidden" style={{ border: `1px solid ${ACCENT_BORDER}`, boxShadow: '0 6px 18px -12px rgba(5,150,105,0.30)' }}>
+                                <img src={qrUrl} alt="Wallet QR" width={180} height={180} className="block rounded-md" />
+                                {/* animated scan line */}
+                                <div
+                                    className="trx-scan pointer-events-none absolute left-3 right-3 h-[2px]"
+                                    style={{ background: `linear-gradient(90deg, transparent, ${ACCENT}, transparent)`, boxShadow: `0 0 8px ${ACCENT}` }}
+                                />
+                                {/* TRON logo in the QR centre */}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div
+                                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                                        style={{ background: TRX_GRAD, border: '3px solid #fff', boxShadow: '0 3px 10px rgba(239,0,39,0.35)' }}
+                                    >
+                                        <TrxLogo size={19} />
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-[11.5px] text-gray-400 font-medium">Scan with any TRON-compatible wallet</p>
+                        </div>
+
+                        <p className="mt-4 text-gray-700 text-[12.5px] font-mono font-semibold break-all leading-relaxed bg-gray-50 rounded-lg px-3 py-3 border border-gray-100 text-center">
+                            {walletAddress}
+                        </p>
                     </div>
 
                     {/* Amount card */}
-                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#fecaca' }}>
-                        <div className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Amount to Send</span>
-                                <CopyBtn text={String(trxAmount)} label="Copy amount" />
-                            </div>
-                            <div className="flex items-end gap-2">
-                                <span className="text-3xl font-extrabold text-gray-800 tracking-tight">{trxAmount}</span>
-                                <span className="text-base font-bold mb-0.5" style={{ color: TRX_COLOR }}>TRX</span>
-                            </div>
+                    <div className="trx-rise bg-white rounded-xl border border-gray-100 shadow-sm p-4" style={{ animationDelay: '.16s' }}>
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-[13px] text-gray-400 font-medium">Amount to Send</p>
+                            <CopyBtn text={String(trxAmount)} label="Copy" />
                         </div>
-                        <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#fff8f6', borderTop: '1px solid #fecaca' }}>
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BRAND }}>
-                                <Zap size={12} className="text-white" />
+                        <div className="flex items-end justify-between">
+                            <div className="flex items-baseline gap-2">
+                                <span
+                                    className="text-[38px] leading-none font-extrabold tracking-tight tabular-nums"
+                                    style={{ backgroundImage: 'linear-gradient(135deg, #334155 0%, #0f172a 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}
+                                >
+                                    {trxAmount}
+                                </span>
+                                <span className="text-xl font-extrabold" style={{ color: ACCENT }}>TRX</span>
                             </div>
-                            <p className="text-sm font-semibold text-gray-600">
-                                ₹{Number(inrAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} will be credited instantly
-                            </p>
+                            <div className="text-right">
+                                <p className="text-[17px] font-bold leading-none text-gray-900">
+                                    ₹{Number(inrAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-[11px] font-bold mt-1 flex items-center justify-end gap-1" style={{ color: '#d97706' }}>
+                                    <Zap size={11} /> Instant Credit
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Live balance */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span
-                                className="w-2 h-2 rounded-full animate-pulse"
-                                style={{ background: liveBalance > 0 ? '#16a34a' : '#fca5a5' }}
-                            />
-                            <span className="text-sm text-gray-500 font-medium">Received at address</span>
-                        </div>
-                        <span className={`font-bold text-sm ${liveBalance > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    {/* Received row */}
+                    <div className="trx-rise flex items-center justify-between px-1" style={{ animationDelay: '.22s' }}>
+                        <span className="text-sm text-gray-500 font-medium">Received at this address</span>
+                        <span
+                            className="text-sm font-bold tabular-nums"
+                            style={{ color: detected ? SUCCESS_C : underpaid ? '#d97706' : '#9ca3af' }}
+                        >
                             {liveBalance === null ? '—' : `${liveBalance.toFixed(4)} TRX`}
                         </span>
                     </div>
@@ -485,17 +591,47 @@ export default function TrxPayment() {
                     {/* Cancel button */}
                     <button
                         onClick={() => setShowCancel(true)}
-                        className="w-full py-3 rounded-2xl text-gray-400 text-sm font-medium border border-gray-200 bg-white active:scale-[0.98] transition-all mb-2"
+                        className="trx-rise w-full py-3.5 rounded-lg text-sm font-bold border bg-white active:scale-[0.99] transition-all hover:bg-red-50"
+                        style={{ borderColor: '#fecaca', color: TRX_COLOR, animationDelay: '.28s' }}
                     >
-                        Cancel order
+                        Cancel Order
                     </button>
+
+                    {/* Trust footer */}
+                    <div className="trx-rise flex items-center justify-center gap-1.5 pt-1 pb-4 text-gray-400" style={{ animationDelay: '.34s' }}>
+                        <ShieldCheck size={13} />
+                        <span className="text-[11px] font-medium">Secured on TRON Mainnet · credited automatically</span>
+                    </div>
                 </div>
+
+                <style>{`
+                    @keyframes trxScan  { 0%{top:12px} 50%{top:calc(100% - 14px)} 100%{top:12px} }
+                    @keyframes trxShine { 0%{left:-60%} 55%,100%{left:160%} }
+                    @keyframes trxFlow  { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+                    @keyframes trxDot   { 0%,100%{opacity:.4;transform:scale(.75)} 50%{opacity:1;transform:scale(1)} }
+                    @keyframes trxStep  { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.45)} 70%{box-shadow:0 0 0 6px rgba(16,185,129,0)} }
+                    @keyframes trxRise  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+                    @keyframes trxStatusShine { 0%{left:-40%} 60%,100%{left:135%} }
+                    .trx-statusshine { animation:trxStatusShine 3s ease-in-out infinite; }
+                    .trx-rise  { animation:trxRise .5s cubic-bezier(.22,1,.36,1) both; }
+                    .trx-scroll::-webkit-scrollbar { width:0; height:0; }
+                    .trx-scroll { scrollbar-width:none; -ms-overflow-style:none; }
+                    .trx-scan  { animation:trxScan 2.6s ease-in-out infinite; }
+                    .trx-shine { animation:trxShine 4.5s ease-in-out infinite; }
+                    .trx-flow  { animation:trxFlow 1.3s linear infinite; }
+                    .trx-dot   { animation:trxDot 1.1s ease-in-out infinite; }
+                    .trx-step-pulse { animation:trxStep 1.6s ease-out infinite; }
+                    @media (prefers-reduced-motion: reduce) {
+                        .trx-scan,.trx-shine,.trx-flow,.trx-dot,.trx-step-pulse,.trx-statusshine,.animate-ping { animation:none !important; }
+                        .trx-rise { animation:none !important; opacity:1 !important; transform:none !important; }
+                    }
+                `}</style>
             </div>
 
             {showCancel && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-8">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-[300px] flex flex-col items-center gap-4">
-                        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-[300px] flex flex-col items-center gap-4 border border-gray-100">
+                        <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
                             <RefreshCw size={24} className="text-red-400" />
                         </div>
                         <div className="text-center">
@@ -505,14 +641,14 @@ export default function TrxPayment() {
                         <div className="flex gap-3 w-full">
                             <button
                                 onClick={() => setShowCancel(false)}
-                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium"
+                                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50"
                             >
                                 Keep
                             </button>
                             <button
                                 onClick={handleCancel}
                                 disabled={cancelling}
-                                className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold bg-red-400 disabled:opacity-60"
+                                className="flex-1 py-2.5 rounded-lg text-white text-sm font-semibold bg-red-500 disabled:opacity-60"
                             >
                                 {cancelling ? 'Cancelling…' : 'Yes, cancel'}
                             </button>
