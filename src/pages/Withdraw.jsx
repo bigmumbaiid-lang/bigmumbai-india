@@ -128,7 +128,11 @@ function Withdraw() {
     }, []);
 
     const handleAmountChange = (e) => {
-        setAmount(e.target.value.replace(/[^0-9]/g, ''));
+        let val = e.target.value.replace(/[^0-9.]/g, '');
+        const parts = val.split('.');
+        if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+        if (parts.length === 2) val = parts[0] + '.' + parts[1].slice(0, 2);
+        setAmount(val);
     };
 
     const setPercentAmount = (pct) => {
@@ -231,7 +235,7 @@ function Withdraw() {
                             <span className="text-2xl font-bold text-gray-400 mr-1">₹</span>
                             <input
                                 type="text"
-                                inputMode="numeric"
+                                inputMode="decimal"
                                 value={amount}
                                 onChange={handleAmountChange}
                                 onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleWithdraw()}

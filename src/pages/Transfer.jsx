@@ -6,7 +6,7 @@ import axios from '../utils/axios';
 import { AuthContext } from '../context/AuthContext';
 
 const BRAND = 'linear-gradient(90deg, rgb(217,173,130), rgb(177,131,90))';
-const QUICK = [1000, 1088, 2088, 5000,7000,10000,14000,15000,20000,28000,30000,42000];
+const QUICK = [1000, 1088, 2088, 5000,7000,10000,14000,16000,20000,28000,30000,42000];
 
 const SHELL = 'flex items-center justify-center min-h-screen';
 const INNER = 'w-full lg:max-w-[400px] mx-auto h-screen flex flex-col overflow-hidden shadow-2xl border border-gray-300';
@@ -270,6 +270,7 @@ function Transfer() {
                                 </div>
                                 <input
                                     type="number"
+                                    step="0.01"
                                     value={amount}
                                     onChange={e => { setAmount(e.target.value); setError(''); setSuccess(null); }}
                                     placeholder="0.00"
