@@ -1,7 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import axios from "../utils/axios";
 import { startHeartbeat, stopHeartbeat } from "../utils/heartbeat";
-import SplashScreen from "../components/SplashScreen";
 
 export const AuthContext = createContext();
 
@@ -129,12 +128,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, token, login, logout, loading, setUser, setBalance }}>
-            {loading ? (
-                // Was a bare blank screen before — on a slow/flaky connection the
-                // session check can take a few seconds, which read as the app
-                // being frozen. Show the branded splash instead of nothing.
-                <SplashScreen />
-            ) : children}
+            {children}
         </AuthContext.Provider>
     );
 };

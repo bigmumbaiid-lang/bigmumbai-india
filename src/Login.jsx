@@ -5,6 +5,7 @@ import logo from './assets/logo.jpg';
 import Link from '@mui/material/Link';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
+import SplashScreen from './components/SplashScreen';
 
 const BRAND_GRADIENT = 'linear-gradient(135deg, rgb(217,173,130) 0%, rgb(177,131,90) 100%)';
 
@@ -13,6 +14,7 @@ function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showSplash, setShowSplash] = useState(false);
 
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -40,7 +42,9 @@ function Login() {
                 username: data.username.trim(),
                 password: data.password,
             });
-            navigate('/');
+            // Show the branded splash as the transition into the app; it navigates
+            // home once its art has painted (see onReady below).
+            setShowSplash(true);
         } catch (err) {
             setError(
                 err.response?.data?.message ||
@@ -49,6 +53,10 @@ function Login() {
             setLoading(false);
         }
     };
+
+    if (showSplash) {
+        return <SplashScreen onReady={() => navigate('/', { replace: true })} />;
+    }
 
     const fieldWrap =
         'flex items-center gap-3 px-4 rounded-2xl border-2 border-gray-200 bg-white transition-all focus-within:border-[#b1835a] focus-within:ring-4 focus-within:ring-[#d8ab83]/20';

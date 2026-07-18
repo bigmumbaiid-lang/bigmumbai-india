@@ -6,6 +6,7 @@ import axios from './utils/axios';
 import Link from '@mui/material/Link';
 import { AuthContext } from './context/AuthContext';
 import logo from './assets/logo.jpg';
+import SplashScreen from './components/SplashScreen';
 
 const BRAND_GRADIENT = 'linear-gradient(135deg, rgb(217,173,130) 0%, rgb(177,131,90) 100%)';
 
@@ -25,6 +26,7 @@ const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [showSplash, setShowSplash] = useState(false);
 
     useEffect(() => {
         if (referralCode) {
@@ -82,7 +84,9 @@ const Register = () => {
                 password: data.password,
             });
 
-            navigate('/');
+            // Show the branded splash as the transition into the app; it navigates
+            // home once its art has painted (see onReady below).
+            setShowSplash(true);
         } catch (err) {
             setError(
                 err.isRateLimit
@@ -92,6 +96,10 @@ const Register = () => {
             setIsSubmitting(false);
         }
     };
+
+    if (showSplash) {
+        return <SplashScreen onReady={() => navigate('/', { replace: true })} />;
+    }
 
     const fieldWrap = (hasError) =>
         `flex items-center gap-3 px-4 rounded-2xl border-2 transition-all
