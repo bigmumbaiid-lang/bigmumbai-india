@@ -145,6 +145,7 @@ function GiftClaim() {
     const { giftCode } = useParams();
 
     const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isAlreadyClaimed, setIsAlreadyClaimed] = useState(false);
     const [recentClaims, setRecentClaims] = useState([]);
@@ -166,6 +167,8 @@ function GiftClaim() {
         } catch (error) {
             console.error(error);
             setIsInvalid(true);
+        } finally {
+            setInitialLoading(false);
         }
     };
 
@@ -290,7 +293,7 @@ function GiftClaim() {
                     />
 
                     {/* slow rotating light rays (hidden once claimed) */}
-                    {!isAlreadyClaimed && !isInvalid && (
+                    {!initialLoading && !isAlreadyClaimed && !isInvalid && (
                         <motion.div
                             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px]"
                             style={{
@@ -327,37 +330,76 @@ function GiftClaim() {
                     ))}
 
                     {/* the chest */}
-                    <div className="absolute left-1/2 top-[42%] -translate-x-1/2 w-[38%] max-w-[190px] z-10">
-                        <motion.div
-                            animate={
-                                isAlreadyClaimed
-                                    ? { y: [0, -4, 0], rotate: [0, 1.5, 0, -1.5, 0] }
-                                    : { y: [0, -12, 0] }
-                            }
-                            transition={{
-                                duration: isAlreadyClaimed ? 5 : 2.6,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                            }}
-                        >
-                            <motion.img
-                                src={isAlreadyClaimed ? openedTreasure : closedTreasure}
-                                alt={isAlreadyClaimed ? 'Opened treasure chest' : 'Closed treasure chest'}
-                                className="w-full h-auto"
-                                style={{ filter: 'drop-shadow(0 18px 26px rgba(120,30,0,0.55))' }}
-                                draggable={false}
-                                initial={{ scale: 0.6, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: 'spring', damping: 14, stiffness: 180 }}
-                            />
-                        </motion.div>
+                    <div className="absolute left-1/2 top-[28%] -translate-x-1/2 w-[38%] max-w-[190px] z-10">
+                        {initialLoading ? (
+                            /* chest placeholder — keeps the hero area in the same
+                               skeleton state until the first fetch resolves */
+                            <div className="animate-pulse aspect-square w-full rounded-[28px] bg-white/25" />
+                        ) : (
+                            <motion.div
+                                animate={
+                                    isAlreadyClaimed
+                                        ? { y: [0, -4, 0], rotate: [0, 1.5, 0, -1.5, 0] }
+                                        : { y: [0, -12, 0] }
+                                }
+                                transition={{
+                                    duration: isAlreadyClaimed ? 5 : 2.6,
+                                    repeat: Infinity,
+                                    ease: 'easeInOut',
+                                }}
+                            >
+                                <motion.img
+                                    src={isAlreadyClaimed ? openedTreasure : closedTreasure}
+                                    alt={isAlreadyClaimed ? 'Opened treasure chest' : 'Closed treasure chest'}
+                                    className="w-full h-auto"
+                                    style={{ filter: 'drop-shadow(0 18px 26px rgba(120,30,0,0.55))' }}
+                                    draggable={false}
+                                    initial={{ scale: 0.6, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ type: 'spring', damping: 14, stiffness: 180 }}
+                                />
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="-mt-6 pb-16 px-5 relative z-10">
 
-                    {isInvalid && (
+                    {/* Skeleton — shown until the first fetch resolves so we never
+                        flash the "Get Cash" button before the real state is known. */}
+                    {initialLoading && (
+                        <div className="animate-pulse">
+                            {/* primary card / button placeholder */}
+                            <div className="mx-auto w-full max-w-[340px] h-[72px] rounded-2xl bg-white/25" />
+
+                            {/* "See if others are lucky" divider placeholder */}
+                            <div className="mt-9 flex items-center justify-center gap-4 mb-5">
+                                <div className="h-px bg-white/25 flex-1" />
+                                <div className="h-3 w-36 rounded-full bg-white/25" />
+                                <div className="h-px bg-white/25 flex-1" />
+                            </div>
+
+                            {/* winners list placeholder */}
+                            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl">
+                                {[0, 1, 2].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="flex items-center px-5 py-4 gap-4 border-b border-gray-100 last:border-b-0"
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+                                        <div className="flex-1 min-w-0 space-y-2">
+                                            <div className="h-3.5 w-28 rounded-full bg-gray-200" />
+                                            <div className="h-3 w-20 rounded-full bg-gray-100" />
+                                        </div>
+                                        <div className="h-4 w-14 rounded-full bg-gray-200" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {!initialLoading && isInvalid && (
                         <motion.div
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -369,7 +411,7 @@ function GiftClaim() {
                         </motion.div>
                     )}
 
-                    {!isInvalid && isAlreadyClaimed && (
+                    {!initialLoading && !isInvalid && isAlreadyClaimed && (
                         <motion.div
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -384,7 +426,7 @@ function GiftClaim() {
                         </motion.div>
                     )}
 
-                    {!isInvalid && !isAlreadyClaimed && (
+                    {!initialLoading && !isInvalid && !isAlreadyClaimed && (
                         <motion.button
                             disabled={loading}
                             onClick={getCash}
@@ -422,7 +464,7 @@ function GiftClaim() {
                     )}
 
                     {/* Winners */}
-                    {!isInvalid && (
+                    {!initialLoading && !isInvalid && (
                         <div className="mt-9">
                             <div className="flex items-center justify-center gap-4 text-white text-[13px] font-semibold tracking-wide mb-5">
                                 <div className="h-px bg-gradient-to-r from-transparent to-white/50 flex-1" />
