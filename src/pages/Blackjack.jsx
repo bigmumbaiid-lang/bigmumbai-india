@@ -16,6 +16,7 @@ const CHIP_COLORS = {
   5000: '#c0392b',
   10000: 'linear-gradient(160deg,#f1d79a,#c9a24c)',
 };
+
 const chipLabel = (v) => (v >= 1000 ? v / 1000 + 'K' : String(v));
 const fmt = (n) =>
   '₹' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -26,7 +27,7 @@ const CSS = `
 .bj, .bj * { box-sizing: border-box; margin: 0; padding: 0; }
 .bj {
   font-family: 'Poppins', system-ui, sans-serif;
-  width: 100%;            /* ← add this */
+  width: 100%;
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -49,7 +50,6 @@ const CSS = `
   overflow: hidden;
 }
 
-/* scrollable game body (header stays fixed on top) */
 .bj-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -61,7 +61,7 @@ const CSS = `
   padding: 12px;
 }
 
-/* ---------- Top bar (caramel gradient — matches Mines) ---------- */
+/* Top bar */
 .bj-top {
   flex: 0 0 auto;
   display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
@@ -80,7 +80,6 @@ const CSS = `
 }
 .bj-back-btn:hover { background:rgba(255,255,255,.3); }
 .bj-back-btn:active { transform:scale(.92); background:rgba(255,255,255,.4); }
-/* MUI's ArrowBackIos has built-in right padding; nudge it to look centered */
 .bj-back-btn svg { margin-left:4px; }
 .bj-name { font-family:'Poppins',sans-serif; font-weight:700; letter-spacing:.25em; font-size:14px; text-transform:uppercase; color:#fff; padding-left:.25em; }
 .bj-bal { display:flex; align-items:center; gap:4px; background:rgba(255,255,255,.2); border-radius:8px; padding:6px 10px; }
@@ -88,7 +87,7 @@ const CSS = `
 .bj-bal-v.up { color:#d8ffe0; }
 .bj-bal-v.down { color:#ffe0dc; }
 
-/* ---------- Felt table (classic emerald + gold) ---------- */
+/* Table */
 .bj-table {
   position:relative;
   border-radius:20px 20px 120px 120px;
@@ -98,7 +97,7 @@ const CSS = `
   border:2px solid #7a5a1e;
   box-shadow:
     0 0 0 4px #ffffff,
-    0 0 0 6px #cba758,                        /* gold piping */
+    0 0 0 6px #cba758,
     0 0 0 7px rgba(90,62,18,.55),
     0 16px 34px rgba(6,45,28,.4),
     inset 0 2px 18px rgba(255,255,255,.14),
@@ -110,7 +109,7 @@ const CSS = `
   display:flex;
   flex-direction:column;
 }
-/* subtle woven-felt texture + top sheen */
+
 .bj-table::after {
   content:""; position:absolute; inset:0; pointer-events:none;
   background:
@@ -119,7 +118,6 @@ const CSS = `
     repeating-linear-gradient(-45deg, rgba(0,0,0,.03) 0 2px, transparent 2px 4px);
 }
 
-/* ---- decorative felt print (watermark + insurance arc) ---- */
 .bj-felt-deco { position:absolute; inset:0; z-index:0; pointer-events:none; }
 .bj-crest {
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
@@ -148,6 +146,8 @@ const CSS = `
 .bj-seat.player { margin-top:auto; }
 .bj-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
 .bj-who { font-size:9px; letter-spacing:.24em; text-transform:uppercase; color:rgba(255,255,255,.92); font-weight:600; }
+
+/* Fixed Score Display */
 .bj-score {
   font-family:'JetBrains Mono',monospace;
   font-weight:700;
@@ -157,6 +157,7 @@ const CSS = `
   padding:1px 9px;
   border-radius:20px;
   min-width:26px;
+  max-width:60px;
   text-align:center;
   box-shadow:0 1px 3px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.4);
   align-self: center;
@@ -167,52 +168,82 @@ const CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
 }
-.bj-score.bust { background:linear-gradient(160deg,#e8564d,#c62f28); color:#fff; }
-.bj-score.bj { background:linear-gradient(160deg,#ffe9a8,#f5cf6c); color:#8a5a12; }
 
+.bj-score.bust { 
+  background:linear-gradient(160deg,#e8564d,#c62f28); 
+  color:#fff; 
+}
+
+.bj-score.bj { 
+  background:linear-gradient(160deg,#ffe9a8,#f5cf6c); 
+  color:#8a5a12; 
+  box-shadow:0 1px 4px rgba(138,90,18,.4), inset 0 0 0 1px rgba(255,255,255,.6);
+}
+
+/* Cards */
 .bj-cards { display:flex; gap:8px; min-height:104px; align-items:flex-start; flex-wrap:wrap; }
 
-/* ---------- Cards ---------- */
-.bj-card { width:74px; height:104px; border-radius:9px; flex:0 0 auto; background:linear-gradient(150deg,#ffffff,#f6f1e7); position:relative; box-shadow:0 7px 14px rgba(4,34,20,.45),inset 0 0 0 1px rgba(0,0,0,.06),inset 0 0 0 3px rgba(255,255,255,.9); padding:6px 7px; }
+.bj-card { 
+  width:74px; height:104px; border-radius:9px; flex:0 0 auto; 
+  background:linear-gradient(150deg,#ffffff,#f6f1e7); 
+  position:relative; box-shadow:0 7px 14px rgba(4,34,20,.45),
+  inset 0 0 0 1px rgba(0,0,0,.06),inset 0 0 0 3px rgba(255,255,255,.9); 
+  padding:6px 7px; 
+}
 .bj-card .c { font-weight:700; line-height:.95; font-size:15px; }
 .bj-card .c .s { font-size:13px; display:block; margin-top:-1px; }
 .bj-card .br { position:absolute; right:7px; bottom:6px; transform:rotate(180deg); }
 .bj-card .mid { position:absolute; inset:0; display:grid; place-items:center; font-size:34px; opacity:.92; }
+
 .bj-card-anim { animation:bjDeal .42s cubic-bezier(.2,.8,.25,1) both; }
 @keyframes bjDeal { from{opacity:0; transform:translateY(-46px) translateX(26px) rotate(9deg) scale(.9);} to{opacity:1; transform:none;} }
 .bj-flip { animation:bjFlip .55s cubic-bezier(.4,.1,.2,1) both; }
 @keyframes bjFlip { from{opacity:0; transform:rotateY(90deg) scale(.96);} to{opacity:1; transform:none;} }
 
-.bj-back { width:74px; height:104px; border-radius:9px; flex:0 0 auto; background:repeating-linear-gradient(45deg,#0f7048 0 7px,#0a5537 7px 14px); border:3px solid #ecd9a2; position:relative; box-shadow:0 7px 14px rgba(4,34,20,.5), inset 0 0 0 1px rgba(0,0,0,.15); }
-.bj-back::after { content:"\\2660"; position:absolute; inset:0; display:grid; place-items:center; color:rgba(236,217,162,.85); font-size:30px; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+.bj-back { 
+  width:74px; height:104px; border-radius:9px; flex:0 0 auto; 
+  background:repeating-linear-gradient(45deg,#0f7048 0 7px,#0a5537 7px 14px); 
+  border:3px solid #ecd9a2; position:relative; 
+  box-shadow:0 7px 14px rgba(4,34,20,.5), inset 0 0 0 1px rgba(0,0,0,.15); 
+}
+.bj-back::after { 
+  content:"♠"; position:absolute; inset:0; display:grid; place-items:center; 
+  color:rgba(236,217,162,.85); font-size:30px; text-shadow:0 1px 2px rgba(0,0,0,.3); 
+}
 
-.bj-banner { text-align:center; margin:10px 0 8px; min-height:48px; }
+/* Banner */
+.bj-banner { text-align:center; margin:10px 0 8px; min-height:60px; }
 .bj-msg { font-family:'Poppins',sans-serif; font-weight:700; letter-spacing:.06em; font-size:18px; }
 .bj-msg.win { color:#d6ffe6; }
 .bj-msg.lose { color:#ffd9d4; }
 .bj-msg.push { color:#fbf3e4; }
 .bj-delta { font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(255,255,255,.9); margin-top:2px; }
 
-/* ---------- Controls (white card) ---------- */
-.bj-ctrl { flex:0 0 auto; background:#fff; border:1px solid #ece7df; border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:12px; box-shadow:0 6px 18px rgba(120,90,40,.08); }
+/* Controls */
+.bj-ctrl { 
+  flex:0 0 auto; background:#fff; border:1px solid #ece7df; border-radius:16px; 
+  padding:14px; display:flex; flex-direction:column; gap:12px; 
+  box-shadow:0 6px 18px rgba(120,90,40,.08); 
+}
 .bj-betrow { display:flex; flex-direction:column; gap:10px; }
 .bj-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
 .bj-chip {
   width:50px; height:50px; border-radius:50%; cursor:pointer; border:none; position:relative;
   display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px; color:#fff;
-  background:#7a8b99; /* fallback so a chip is NEVER white */
+  background:#7a8b99;
   box-shadow:0 4px 8px rgba(0,0,0,.3), inset 0 0 0 4px rgba(255,255,255,.18), 0 0 0 2px rgba(177,131,90,.4);
   outline:3px dashed rgba(255,255,255,.75); outline-offset:-7px; transition:transform .12s;
 }
 .bj-chip:hover:not(:disabled) { transform:translateY(-3px); }
 .bj-chip:active:not(:disabled) { transform:translateY(-1px) scale(.96); }
 .bj-chip:disabled { opacity:.4; cursor:not-allowed; }
+
 .bj-betbox { text-align:center; }
 .bj-betbox .l { font-size:9px; letter-spacing:.18em; color:#9aa0ad; text-transform:uppercase; }
 .bj-betbox .v { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:22px; color:#20242e; }
 
-/* ---------- Buttons (colorful) ---------- */
 .bj-actions { display:flex; gap:9px; }
 .bj-btn {
   flex:1; border:none; cursor:pointer; border-radius:12px; padding:13px 10px;
@@ -242,11 +273,7 @@ const CSS = `
 }
 
 @media (max-width:480px){
-  .bj-wrap{
-    max-width:100%;
-    border-left:none;
-    border-right:none;
-  }
+  .bj-wrap{ max-width:100%; border-left:none; border-right:none; }
 }
   
 @media (prefers-reduced-motion:reduce){
@@ -254,9 +281,9 @@ const CSS = `
 }
 `;
 
-/* Presentational */
+/* Card Component */
 function Card({ card, flip = false }) {
-  const red = card.suit === '\u2665' || card.suit === '\u2666';
+  const red = card.suit === '♥' || card.suit === '♦';
   return (
     <div className={`bj-card ${flip ? 'bj-flip' : 'bj-card-anim'}`} style={{ color: red ? '#b8392b' : '#16110a' }}>
       <span className="c">{card.rank}<span className="s">{card.suit}</span></span>
@@ -312,7 +339,6 @@ function resultText(game) {
 
 /* Main Component */
 export default function Blackjack() {
-
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [game, setGame] = useState(null);
@@ -420,7 +446,6 @@ export default function Blackjack() {
 
           <div className="bj-body">
             <div className="bj-table">
-              {/* felt print */}
               <div className="bj-felt-deco" aria-hidden="true">
                 <span className="bj-crest">♠</span>
                 <span className="bj-ins-arc" />
@@ -450,7 +475,7 @@ export default function Blackjack() {
                 </div>
               </div>
 
-              {/* Banner */}
+              {/* Result Banner */}
               <div className="bj-banner">
                 {banner && (
                   <>
